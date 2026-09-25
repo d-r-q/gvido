@@ -16,7 +16,7 @@
   color: #a3a6ae;
   background-color: transparent;
   border-radius: 6px;
-  font-size: 18px;
+  font-size: 1.25em;
 }
 .overview-todo-resize-handle:hover {
   color: #3584e4;
@@ -29,7 +29,7 @@
 }
 
 .overview-todo-title {
-  font-size: 18px;
+  font-size: 1.25em;
   font-weight: 700;
   color: #2e3436;
 }
@@ -40,7 +40,7 @@
   background-color: #ffffff;
   border: 1px solid #dedfe5;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 0.85em;
   font-weight: 600;
 }
 
@@ -105,7 +105,7 @@
 }
 
 .overview-todo-task {
-  font-size: 14px;
+  font-size: 1em;
   font-weight: 400;
 }
 
@@ -118,7 +118,7 @@
 .overview-todo-preview:focus { border-color: #99c1f1; }
 .overview-todo-preview-content { spacing: 7px; }
 .overview-todo-comment {
-  font-size: 12px;
+  font-size: 0.85em;
   color: #6f737a;
   padding: 2px 0 2px 9px;
   border-left: 2px solid #dedfe4;
@@ -131,12 +131,12 @@
   color: #30353d;
   font-weight: 700;
 }
-.overview-todo-heading.heading-1 { font-size: 15px; }
-.overview-todo-heading.heading-2 { font-size: 14px; }
+.overview-todo-heading.heading-1 { font-size: 1.05em; }
+.overview-todo-heading.heading-2 { font-size: 1em; }
 .overview-todo-heading.heading-3,
 .overview-todo-heading.heading-4,
 .overview-todo-heading.heading-5,
-.overview-todo-heading.heading-6 { font-size: 13px; }
+.overview-todo-heading.heading-6 { font-size: 0.95em; }
 
 .overview-todo-check-hit {
   width: 28px;
@@ -193,7 +193,7 @@
   color: #d3d5db;
 }
 .overview-todo-heading-action-content { spacing: 5px; }
-.overview-todo-heading-action-hint { font-size: 11px; }
+.overview-todo-heading-action-hint { font-size: 0.8em; }
 .overview-todo-expand:hover,
 .overview-todo-add-to-heading:hover,
 .overview-todo-drag-handle:hover {
@@ -209,7 +209,7 @@
   color: #ffffff;
   background-color: #30353d;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 0.8em;
 }
 .overview-todo-delete:hover {
   color: #c01c28;
@@ -227,7 +227,7 @@
   border: 1px solid #d9dfe8;
   border-radius: 11px;
   box-shadow: 0 5px 18px 2px rgba(29, 38, 53, 0.14);
-  font-size: 12px;
+  font-size: 0.85em;
 }
 .overview-todo-undo-button {
   padding: 4px 6px;
