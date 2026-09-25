@@ -1569,6 +1569,27 @@
                 return Clutter.EVENT_STOP;
             }
             if ((state & Clutter.ModifierType.CONTROL_MASK) &&
+                (symbol === Clutter.KEY_v || symbol === Clutter.KEY_V ||
+                    symbol === Clutter.KEY_Cyrillic_em || symbol === Clutter.KEY_Cyrillic_EM)) {
+                St.Clipboard.get_default().get_text(St.ClipboardType.CLIPBOARD,
+                    (_clipboard, text) => {
+                        if (!text || this._rowWidgets[index]?.entryText !== entryText ||
+                            !entryText.has_key_focus())
+                            return;
+                        const characters = Array.from(entryText.get_text());
+                        const cursor = entryText.get_cursor_position();
+                        const bound = entryText.get_selection_bound();
+                        const anchor = cursor < 0 ? characters.length : cursor;
+                        const start = bound >= 0 ? Math.min(anchor, bound) : anchor;
+                        const end = bound >= 0 ? Math.max(anchor, bound) : anchor;
+                        const inserted = Array.from(text);
+                        characters.splice(start, end - start, ...inserted);
+                        entryText.set_text(characters.join(''));
+                        entryText.set_cursor_position(start + inserted.length);
+                    });
+                return Clutter.EVENT_STOP;
+            }
+            if ((state & Clutter.ModifierType.CONTROL_MASK) &&
                 (symbol === Clutter.KEY_z || symbol === Clutter.KEY_Z ||
                     symbol === Clutter.KEY_Cyrillic_ya || symbol === Clutter.KEY_Cyrillic_YA)) {
                 this._restoreText(index, entryText,

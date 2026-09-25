@@ -909,6 +909,35 @@ export async function run() {
         focusRuntime._items[1].text !== 'езать' || !focusedEditor.has_key_focus())
         throw new Error(`Russian Ctrl+X did not cut selection: ${cutText}`);
     console.log('PROBE PASS: Russian Ctrl+X cuts selected editor text');
+    focusedEditor.set_cursor_position(0);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_em, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_em, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (focusedEditor.get_text() !== 'Вырезать' ||
+        focusRuntime._items[1].text !== 'Вырезать' ||
+        !focusedEditor.has_key_focus())
+        throw new Error(`Russian Ctrl+V did not paste at the editor cursor: ${focusedEditor.get_text()}, ${focusRuntime._items[1].text}, ${focusedEditor.get_cursor_position()}`);
+    St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, 'Другое');
+    focusedEditor.set_selection(0, 3);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_em, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_em, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (focusedEditor.get_text() !== 'Другоеезать' ||
+        focusRuntime._items[1].text !== 'Другоеезать' ||
+        !focusedEditor.has_key_focus())
+        throw new Error('Russian Ctrl+V did not replace the editor selection');
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_ya, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_ya, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (focusedEditor.get_text() !== 'Вырезать')
+        throw new Error('One undo did not revert the pasted selection');
+    console.log('PROBE PASS: Russian Ctrl+V pastes at cursor and replaces selection');
     focusRuntime._addItem('task');
     await delay(300);
     if (focusRuntime._items[0].type !== 'task' ||
