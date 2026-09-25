@@ -670,6 +670,40 @@ export async function run() {
         throw new Error('Adding a subtask did not append to the parent branch and focus it');
     console.log('PROBE PASS: add-subtask action follows comment, opens parent, and focuses new child');
     runtime._items = [
+        {type: 'heading', level: 0, text: 'Раздел'},
+        {type: 'task', level: 0, text: 'Родитель', done: false},
+        {type: 'task', level: 1, text: 'Дочерняя', done: false},
+        {type: 'task', level: 2, text: 'Внучатая', done: false},
+        {type: 'task', level: 0, text: 'Следующая', done: false},
+    ];
+    runtime._renderItems();
+    const nextTask = runtime._items[4];
+    runtime._selectItem(2, true);
+    if (runtime._handleRowKey(2, {
+        get_key_symbol: () => Clutter.KEY_Return,
+        get_state: () => Clutter.ModifierType.SHIFT_MASK,
+    }) !== Clutter.EVENT_STOP)
+        throw new Error('Shift+Enter was not handled on a selected task');
+    await delay(150);
+    if (runtime._items[3].text !== 'Внучатая' ||
+        runtime._items[4].text !== 'Новая задача' ||
+        runtime._items[4].level !== 1 || runtime._items[5] !== nextTask ||
+        runtime._selectedIndex !== 4 ||
+        !runtime._rowWidgets[4].entryText.has_key_focus())
+        throw new Error('Shift+Enter did not add a sibling after the selected task branch');
+    runtime._selectItem(1, true);
+    runtime._handleRowKey(1, {
+        get_key_symbol: () => Clutter.KEY_KP_Enter,
+        get_state: () => Clutter.ModifierType.SHIFT_MASK,
+    });
+    await delay(150);
+    if (runtime._items[5].text !== 'Новая задача' ||
+        runtime._items[5].level !== 0 || runtime._items[6] !== nextTask ||
+        runtime._selectedIndex !== 5 ||
+        !runtime._rowWidgets[5].entryText.has_key_focus())
+        throw new Error('Shift+KP_Enter did not add a top-level sibling after the branch');
+    console.log('PROBE PASS: Shift+Enter adds a same-level task after its branch in navigation mode');
+    runtime._items = [
         {type: 'heading', level: 0, text: 'Сегодня'},
         {type: 'task', level: 0, text: 'Подготовить релиз\nСверить сценарии',
             done: false, expanded: true},

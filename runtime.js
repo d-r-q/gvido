@@ -1578,6 +1578,11 @@
                 this._toggleTask(index);
                 return Clutter.EVENT_STOP;
             }
+            if (this._items[index]?.type === 'task' && isEnter &&
+                (state & Clutter.ModifierType.SHIFT_MASK)) {
+                this._addSiblingTask(index);
+                return Clutter.EVENT_STOP;
+            }
             if (symbol === Clutter.KEY_Delete || symbol === Clutter.KEY_KP_Delete) {
                 if (this._items[index])
                     this._deleteItem(index);
@@ -1762,6 +1767,19 @@
             this._items.splice(insertIndex, 0, {
                 type: 'task',
                 level: parent.level + 1,
+                text: cfg.ui.newTaskText,
+                done: false,
+            });
+            this._scheduleSave();
+            this._queueRender(insertIndex, true);
+        }
+
+        _addSiblingTask(index) {
+            const item = this._items[index];
+            const insertIndex = this._blockRange(index).end;
+            this._items.splice(insertIndex, 0, {
+                type: 'task',
+                level: item.level,
                 text: cfg.ui.newTaskText,
                 done: false,
             });
