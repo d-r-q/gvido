@@ -44,6 +44,7 @@ export async function run() {
     runtime._resizeHandle.set_position(105, 677);
     Main.layoutManager.addTopChrome(runtime._card);
     Main.layoutManager.addTopChrome(runtime._resizeHandle);
+    Main.layoutManager.addTopChrome(runtime._undoBar);
     St.ThemeContext.get_for_stage(global.stage).get_theme().load_stylesheet(Gio.File.new_for_path(`${root}/theme.css`));
     await delay(1000);
     runtime._focusSelection();
@@ -51,6 +52,8 @@ export async function run() {
         runtime._rowWidgets[0].entryText.has_key_focus())
         throw new Error('Opening did not focus the first row without editing');
     runtime._selectItem(1);
+    if (!runtime._rowWidgets[1].row.hover && runtime._rowWidgets[1].remove.opacity !== 0)
+        throw new Error('Selected task showed the delete button without hover');
     runtime._card.grab_key_focus();
     runtime._focusSelection();
     if (runtime._selectedIndex !== 1 || !runtime._rowWidgets[1].row.has_key_focus() ||
@@ -156,11 +159,22 @@ export async function run() {
     runtime._rowWidgets[4].row.get_children().find(child =>
         child.has_style_class_name('overview-todo-delete')).emit('clicked', 1);
     await delay(300);
+    if (runtime._card.height !== 500 || !runtime._undoBar.visible)
+        throw new Error('Undo notification changed the card height or did not appear');
+    await screenshot('undo', runtime._card);
     if (runtime._items[4].type !== 'heading' ||
         runtime._rowWidgets[4].entryText.has_key_focus() ||
         !runtime._rowWidgets[4].entry.visible)
         throw new Error('Deleting a task opened the following heading for editing');
     console.log('PROBE PASS: deleting a task leaves the following heading unedited');
+    runtime._undoDelete();
+    await delay(300);
+    if (runtime._items[4].text !== 'Обсудить дизайн\nОтступы и состояния кнопок' ||
+        runtime._undoBar.visible || runtime._selectedIndex !== 4)
+        throw new Error('Undo did not restore the deleted task and selection');
+    console.log('PROBE PASS: undo restores a deleted task');
+    runtime._deleteItem(4);
+    await delay(300);
     Main.overview.show();
     await delay(500);
     const layoutEditor = runtime._rowWidgets[1].entryText;
@@ -318,6 +332,9 @@ export async function run() {
         defaultContent: '# Первый раздел\n- [ ] Первое дело\n',
     }});
     focusRuntime.enable();
+    if (focusRuntime._card.height < 150 || focusRuntime._card.height >= 360)
+        throw new Error(`Short list did not get a compact card: ${focusRuntime._card.height}`);
+    console.log('PROBE PASS: short list uses compact card height');
     Main.overview.show();
     await delay(900);
     if (!focusRuntime._rowWidgets[0].row.has_key_focus() ||

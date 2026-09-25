@@ -3,7 +3,7 @@
   padding: 18px 12px 12px;
   spacing: 16px;
   color: #2e3436;
-  background-color: #fafafb;
+  background-color: #fbfbfc;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 20px;
   box-shadow: 0 8px 24px 4px rgba(0, 0, 0, 0.20);
@@ -37,20 +37,21 @@
 .overview-todo-action {
   padding: 8px 10px;
   color: #43474c;
-  background-color: #ebebee;
-  border: 1px solid transparent;
+  background-color: #ffffff;
+  border: 1px solid #dedfe5;
   border-radius: 9px;
   font-size: 12px;
   font-weight: 600;
 }
 
-.overview-todo-action:hover { background-color: #dfdfe4; }
-.overview-todo-action:active { background-color: #d3d3da; }
+.overview-todo-action:hover { background-color: #f1f3f6; }
+.overview-todo-action:active { background-color: #e6e9ed; }
 .overview-todo-action:focus { border-color: #3584e4; }
 
 .overview-todo-action-primary {
   color: #ffffff;
   background-color: #3584e4;
+  border-color: #3584e4;
 }
 .overview-todo-action-primary:hover { background-color: #4990e7; }
 .overview-todo-action-primary:active { background-color: #1c71d8; }
@@ -76,8 +77,8 @@
 }
 .overview-todo-row:hover { background-color: #f5f5f7; }
 .overview-todo-row.selected,
-.overview-todo-row.selected:hover { background-color: #e8f2ff; }
-.overview-todo-heading-after-task { margin-top: 16px; }
+.overview-todo-row.selected:hover { background-color: #f0f6ff; }
+.overview-todo-heading-after-task { margin-top: 18px; }
 
 .overview-todo-entry {
   padding: 6px 5px;
@@ -117,7 +118,7 @@
   text-decoration: line-through;
 }
 .overview-todo-heading {
-  color: #454950;
+  color: #30353d;
   font-weight: 700;
 }
 .overview-todo-heading.heading-1 { font-size: 15px; }
@@ -127,26 +128,36 @@
 .overview-todo-heading.heading-5,
 .overview-todo-heading.heading-6 { font-size: 13px; }
 
-.overview-todo-check-small {
+.overview-todo-check-hit {
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  margin-right: 0;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+.overview-todo-check-hit:hover { background-color: #e9eff8; }
+.overview-todo-check-hit:focus { border-color: #3584e4; }
+
+.overview-todo-check-indicator {
   min-width: 0;
   min-height: 0;
   width: 12px;
   height: 12px;
-  margin-top: 8px;
-  margin-right: 10px;
   color: #ffffff;
   background-color: #ffffff;
   border: 1px solid #b6b9c0;
   border-radius: 4px;
   transition-duration: 120ms;
 }
-.overview-todo-check-small:hover,
-.overview-todo-check-small:focus { border-color: #3584e4; }
-.overview-todo-check-small.checked {
+.overview-todo-check-hit:hover .overview-todo-check-indicator { border-color: #3584e4; }
+.overview-todo-check-indicator.checked {
   background-color: #3584e4;
   border-color: #3584e4;
 }
-.overview-todo-check-small.checked:hover { background-color: #1c71d8; }
+.overview-todo-check-hit:hover .overview-todo-check-indicator.checked { background-color: #1c71d8; }
 
 .overview-todo-expand,
 .overview-todo-add-to-heading,
@@ -164,8 +175,10 @@
 }
 .overview-todo-drag-handle {
   width: 12px;
-  color: #c5c7ce;
+  color: #d3d5db;
 }
+.overview-todo-heading-action-content { spacing: 5px; }
+.overview-todo-heading-action-hint { font-size: 11px; }
 .overview-todo-expand:hover,
 .overview-todo-add-to-heading:hover,
 .overview-todo-drag-handle:hover {
@@ -183,3 +196,24 @@
 
 .overview-todo-drop-before { border-top: 2px solid #3584e4; }
 .overview-todo-drop-after { border-bottom: 2px solid #3584e4; }
+
+.overview-todo-undo-bar {
+  spacing: 8px;
+  padding: 7px 12px;
+  color: #454950;
+  background-color: #ffffff;
+  border: 1px solid #d9dfe8;
+  border-radius: 11px;
+  box-shadow: 0 5px 18px 2px rgba(29, 38, 53, 0.14);
+  font-size: 12px;
+}
+.overview-todo-undo-button {
+  padding: 4px 6px;
+  color: #1c71d8;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-weight: 700;
+}
+.overview-todo-undo-button:hover { background-color: #edf4fd; }
+.overview-todo-undo-button:focus { border-color: #3584e4; }

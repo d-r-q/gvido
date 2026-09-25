@@ -5,10 +5,10 @@
   "ui": {
     "title": "Задачи",
     "addTaskLabel": "+ Задача",
-    "addHeadingLabel": "+ Заголовок",
+    "addHeadingLabel": "+ Список",
     "addTaskToHeadingLabel": "+",
     "newTaskText": "Новая задача",
-    "newHeadingText": "Новый заголовок",
+    "newHeadingText": "Новый список",
     "deleteLabel": "×",
     "checkedLabel": "✓",
     "dragHandleLabel": "⋮⋮"

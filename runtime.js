@@ -5,10 +5,10 @@
         ui: {
             title: 'Задачи',
             addTaskLabel: '+ Задача',
-            addHeadingLabel: '+ Заголовок',
+            addHeadingLabel: '+ Список',
             addTaskToHeadingLabel: '+',
             newTaskText: 'Новая задача',
-            newHeadingText: 'Новый заголовок',
+            newHeadingText: 'Новый список',
             deleteLabel: '×',
             checkedLabel: '✓',
             dragHandleLabel: '⋮⋮',
@@ -175,6 +175,8 @@
             this._dragCaptureId = 0;
             this._drag = null;
             this._dropIndicatorIndex = -1;
+            this._undo = null;
+            this._undoSourceId = 0;
         }
 
         enable() {
@@ -190,6 +192,7 @@
             this._dragCaptureId = 0;
             this._drag = null;
             this._dropIndicatorIndex = -1;
+            this._undo = null;
 
             this._ensureFile();
             this._loadItems();
@@ -202,6 +205,7 @@
             // of participating in their layout.
             Main.layoutManager.overviewGroup.add_child(this._card);
             Main.layoutManager.overviewGroup.add_child(this._resizeHandle);
+            Main.layoutManager.overviewGroup.add_child(this._undoBar);
 
             this._overviewShowingId = Main.overview.connect('showing', () => {
                 this._flushSave();
@@ -232,6 +236,10 @@
                 GLib.Source.remove(this._renderSourceId);
                 this._renderSourceId = 0;
             }
+            if (this._undoSourceId) {
+                GLib.Source.remove(this._undoSourceId);
+                this._undoSourceId = 0;
+            }
             if (this._overviewShowingId) {
                 Main.overview.disconnect(this._overviewShowingId);
                 this._overviewShowingId = 0;
@@ -247,8 +255,11 @@
 
             this._card?.destroy();
             this._resizeHandle?.destroy();
+            this._undoBar?.destroy();
             this._card = null;
             this._resizeHandle = null;
+            this._undoBar = null;
+            this._undoMessage = null;
             this._sizeFile = null;
             this._list = null;
             this._scroll = null;
@@ -258,6 +269,7 @@
             this._rowWidgets = [];
             this._items = [];
             this._selectedIndex = -1;
+            this._undo = null;
             this._file = null;
         }
 
@@ -407,6 +419,23 @@
             this._card.add_child(header);
             this._card.add_child(this._scroll);
 
+            this._undoBar = new St.BoxLayout({
+                style_class: 'overview-todo-undo-bar',
+                visible: false,
+            });
+            this._undoMessage = new St.Label({
+                x_expand: true,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            const undoButton = new St.Button({
+                label: 'Отменить',
+                can_focus: true,
+                style_class: 'overview-todo-undo-button',
+            });
+            undoButton.connect('clicked', () => this._undoDelete());
+            this._undoBar.add_child(this._undoMessage);
+            this._undoBar.add_child(undoButton);
+
             this._resizeHandle = new St.Button({
                 label: '⋱',
                 accessible_name: 'Изменить размер виджета',
@@ -444,7 +473,7 @@
             const availableWidth = Math.max(1, monitor.width - margin * 2);
             const availableHeight = Math.max(1,
                 monitor.height - panelHeight - panelGap - margin * 2);
-            const defaultHeight = Math.round(clamp(
+            const maxHeight = Math.round(clamp(
                 monitor.height * Number(layout.heightFraction || 0.64),
                 Number(layout.heightMin || 360),
                 Math.min(Number(layout.heightMax || 660), availableHeight)
@@ -453,9 +482,11 @@
             const width = Math.round(clamp(this._sizeOverride?.width ?? defaultWidth,
                 Math.min(Number(layout.widthMin || 330), availableWidth),
                 availableWidth));
-            const height = Math.round(clamp(this._sizeOverride?.height ?? defaultHeight,
-                Math.min(Number(layout.heightMin || 360), availableHeight),
-                availableHeight));
+            const listHeight = this._list?.get_preferred_height(Math.max(1, width - 40))[1] || 0;
+            const naturalHeight = listHeight + 92;
+            const height = Math.round(clamp(this._sizeOverride?.height ?? naturalHeight,
+                Math.min(150, availableHeight),
+                this._sizeOverride ? availableHeight : maxHeight));
 
             this._card.set_size(width, height);
             this._card.set_position(
@@ -465,6 +496,11 @@
             this._resizeHandle?.set_position(
                 monitor.x + monitor.width - width - margin + 5,
                 monitor.y + panelHeight + panelGap + height - 23);
+            const undoWidth = Math.min(width - 36, 260);
+            this._undoBar?.set_size(undoWidth, 40);
+            this._undoBar?.set_position(
+                monitor.x + monitor.width - margin - undoWidth - 18,
+                monitor.y + panelHeight + panelGap + height - 54);
         }
 
         _beginResize(x, y) {
@@ -527,6 +563,7 @@
 
                 if (index === this._selectedIndex)
                     row.add_style_class_name('selected');
+                row.connect('notify::hover', () => this._updateDeleteVisibility(index));
                 row.connect('key-focus-in', () => this._selectItem(index));
                 row.connect('key-press-event', (_actor, event) =>
                     entryText.has_key_focus()
@@ -573,13 +610,21 @@
 
                 let checkbox = null;
                 if (item.type === 'task') {
+                    const checkIcon = new St.Icon({
+                        icon_name: 'object-select-symbolic',
+                        icon_size: 8,
+                        opacity: item.done ? 255 : 0,
+                    });
+                    const checkIndicator = new St.Bin({
+                        child: checkIcon,
+                        style_class: `overview-todo-check-indicator${item.done ? ' checked' : ''}`,
+                    });
                     checkbox = new St.Button({
-                        child: new St.Icon({icon_name: 'object-select-symbolic', icon_size: 8,
-                            opacity: item.done ? 255 : 0}),
+                        child: checkIndicator,
                         accessible_name: item.done ? 'Отметить невыполненной' : 'Отметить выполненной',
                         can_focus: true,
                         y_align: Clutter.ActorAlign.START,
-                    style_class: `overview-todo-check-small${item.done ? ' checked' : ''}`,
+                        style_class: 'overview-todo-check-hit',
                     });
                     checkbox.connect('key-focus-in', () => this._selectItem(index));
                     checkbox.connect('clicked', () => this._toggleTask(index));
@@ -667,6 +712,7 @@
                     if (item.type === 'task' && !isCollapsedTask)
                         item.expanded = item.text.includes('\n');
                     this._updateRowAppearance(index);
+                    this._positionCard();
                     this._scheduleSave();
                 });
 
@@ -711,6 +757,7 @@
                     const maxLevel = Math.max(0, Number(cfg.behavior.maxLevel) || 5);
                     item.level = clamp(item.level + (backwards ? -1 : 1), 0, maxLevel);
                     this._updateRowAppearance(index);
+                    this._positionCard();
                     this._scheduleSave();
                     return Clutter.EVENT_STOP;
                 });
@@ -780,19 +827,32 @@
                             ? item.text.split(/\r?\n/, 1)[0] : item.text);
                         updatingEntry = false;
                         this._updateRowAppearance(index);
+                        this._positionCard();
                     });
                     row.add_child(expandTask);
                 }
 
                 if (item.type === 'heading') {
+                    const hint = new St.Label({
+                        text: 'Добавить задачу',
+                        visible: false,
+                        y_align: Clutter.ActorAlign.CENTER,
+                        style_class: 'overview-todo-heading-action-hint',
+                    });
+                    const addContent = new St.BoxLayout({style_class: 'overview-todo-heading-action-content'});
+                    addContent.add_child(new St.Icon({icon_name: 'list-add-symbolic', icon_size: 12,
+                        x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER}));
+                    addContent.add_child(hint);
                     const addTaskToHeading = new St.Button({
-                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 12,
-                            x_align: Clutter.ActorAlign.CENTER,
-                            y_align: Clutter.ActorAlign.CENTER}),
-                        accessible_name: 'Добавить задачу в раздел',
+                        child: addContent,
+                        accessible_name: 'Добавить задачу в список',
                         can_focus: true,
+                        track_hover: true,
                         y_align: Clutter.ActorAlign.START,
                         style_class: 'overview-todo-add-to-heading',
+                    });
+                    addTaskToHeading.connect('notify::hover', () => {
+                        hint.visible = addTaskToHeading.hover;
                     });
                     addTaskToHeading.connect('key-focus-in', () => this._selectItem(index));
                     addTaskToHeading.connect('clicked', () => this._addTaskToHeading(index));
@@ -812,15 +872,21 @@
                     y_align: Clutter.ActorAlign.START,
                     style_class: 'overview-todo-delete',
                 });
-                remove.connect('key-focus-in', () => this._selectItem(index));
+                remove.connect('key-focus-in', () => {
+                    this._selectItem(index);
+                    this._updateDeleteVisibility(index);
+                });
+                remove.connect('key-focus-out', () => this._updateDeleteVisibility(index));
                 remove.connect('clicked', () => this._deleteItem(index));
                 row.add_child(remove);
 
                 this._list.add_child(row);
                 this._rowWidgets[index] = {row, entry, entryText, checkbox, dragHandle,
-                    expandTask, preview, previewTitle, previewComment, setEditing};
+                    expandTask, preview, previewTitle, previewComment, remove, setEditing};
                 this._updateRowAppearance(index);
+                this._updateDeleteVisibility(index);
             });
+            this._positionCard();
         }
 
         _blockRange(index) {
@@ -1017,15 +1083,25 @@
             if (index < 0 || index >= this._items.length)
                 return;
 
+            const previousIndex = this._selectedIndex;
             this._rowWidgets[this._selectedIndex]?.row
                 .remove_style_class_name('selected');
             this._selectedIndex = index;
+            this._updateDeleteVisibility(previousIndex);
             const row = this._rowWidgets[index]?.row;
             row?.add_style_class_name('selected');
+            this._updateDeleteVisibility(index);
             if (focus && row) {
                 row.grab_key_focus();
                 this._ensureSelectionVisible(row);
             }
+        }
+
+        _updateDeleteVisibility(index) {
+            const widgets = this._rowWidgets[index];
+            if (widgets?.remove)
+                widgets.remove.opacity = widgets.row.hover || widgets.remove.has_key_focus()
+                    ? 255 : 0;
         }
 
         _focusSelection() {
@@ -1060,13 +1136,13 @@
 
             this._selectItem(index);
             item.done = !item.done;
-            checkbox.child.opacity = item.done ? 255 : 0;
+            checkbox.child.child.opacity = item.done ? 255 : 0;
             checkbox.accessible_name = item.done
                 ? 'Отметить невыполненной' : 'Отметить выполненной';
             if (item.done)
-                checkbox.add_style_class_name('checked');
+                checkbox.child.add_style_class_name('checked');
             else
-                checkbox.remove_style_class_name('checked');
+                checkbox.child.remove_style_class_name('checked');
             this._updateRowAppearance(index);
             this._scheduleSave();
         }
@@ -1074,11 +1150,40 @@
         _deleteItem(index) {
             if (index < 0 || index >= this._items.length)
                 return;
-            this._items.splice(index, 1);
+            const [item] = this._items.splice(index, 1);
+            this._undo = {item, index};
+            this._undoMessage.text = item.type === 'heading' ? 'Список удалён' : 'Задача удалена';
+            this._undoBar.visible = true;
+            if (this._undoSourceId)
+                GLib.Source.remove(this._undoSourceId);
+            this._undoSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 7000, () => {
+                this._undoSourceId = 0;
+                this._undo = null;
+                this._undoBar.visible = false;
+                this._positionCard();
+                return GLib.SOURCE_REMOVE;
+            });
             this._scheduleSave();
             const nextIndex = Math.min(index, this._items.length - 1);
             this._selectedIndex = nextIndex;
             this._queueRender(-1, false, nextIndex);
+        }
+
+        _undoDelete() {
+            if (!this._undo)
+                return;
+            const {item, index} = this._undo;
+            this._undo = null;
+            if (this._undoSourceId) {
+                GLib.Source.remove(this._undoSourceId);
+                this._undoSourceId = 0;
+            }
+            this._undoBar.visible = false;
+            const insertIndex = Math.min(index, this._items.length);
+            this._items.splice(insertIndex, 0, item);
+            this._selectedIndex = insertIndex;
+            this._scheduleSave();
+            this._queueRender(-1, false, insertIndex);
         }
 
         _handleEditorShortcut(index, event, entryText) {
