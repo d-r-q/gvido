@@ -69,9 +69,15 @@ export async function run() {
             const [width, height] = button.get_transformed_size();
             const [iconX, iconY] = button.child.get_transformed_position();
             const [iconWidth, iconHeight] = button.child.get_transformed_size();
+            if (width < 28 || height < 32)
+                throw new Error(`Action hit area is too small: ${button.style_class}`);
             console.log(`ACTION row=${i} class=${button.style_class} buttonCenter=${x + width / 2},${y + height / 2} iconCenter=${iconX + iconWidth / 2},${iconY + iconHeight / 2}`);
         }
     }
+    const [handleWidth, handleHeight] = runtime._rowWidgets[0].dragHandle.get_transformed_size();
+    if (handleWidth < 24 || handleHeight < 32)
+        throw new Error('Drag handle hit area is too small');
+    console.log('PROBE PASS: action hit areas exceed symbolic icon sizes');
     const checkboxRow = runtime._rowWidgets[1];
     checkboxRow.checkbox.emit('clicked', 1);
     if (!runtime._items[1].done || runtime._rowWidgets[1] !== checkboxRow ||

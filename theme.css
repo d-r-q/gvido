@@ -167,8 +167,8 @@
 .overview-todo-add-to-heading,
 .overview-todo-delete,
 .overview-todo-drag-handle {
-  width: 24px;
-  height: 28px;
+  width: 28px;
+  height: 32px;
   margin-top: 1px;
   padding: 0;
   color: #8c9099;
@@ -179,11 +179,11 @@
 }
 .overview-todo-children-slot,
 .overview-todo-comment-slot {
-  width: 24px;
-  height: 28px;
+  width: 28px;
+  height: 32px;
 }
 .overview-todo-drag-handle {
-  width: 12px;
+  width: 24px;
   color: #d3d5db;
 }
 .overview-todo-heading-action-content { spacing: 5px; }

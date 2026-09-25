@@ -590,7 +590,7 @@
                 }
 
                 const dragHandle = new St.Button({
-                    child: new St.Icon({icon_name: 'list-drag-handle-symbolic', icon_size: 12}),
+                    child: new St.Icon({icon_name: 'list-drag-handle-symbolic', icon_size: 16}),
                     accessible_name: 'Переместить выше или ниже стрелками вверх и вниз',
                     can_focus: true,
                     reactive: true,
@@ -624,7 +624,7 @@
                     expandList = new St.Button({
                         child: new St.Icon({
                             icon_name: item.listCollapsed ? 'pan-end-symbolic' : 'pan-down-symbolic',
-                            icon_size: 12,
+                            icon_size: 16,
                         }),
                         accessible_name: item.listCollapsed ? 'Показать список' : 'Свернуть список',
                         can_focus: true,
@@ -653,7 +653,7 @@
                     expandChildren = new St.Button({
                         child: new St.Icon({
                             icon_name: item.childrenCollapsed ? 'pan-end-symbolic' : 'pan-down-symbolic',
-                            icon_size: 12,
+                            icon_size: 16,
                         }),
                         accessible_name: item.childrenCollapsed
                             ? 'Показать подзадачи' : 'Свернуть подзадачи',
@@ -891,7 +891,7 @@
                 let expandTask = null;
                 if (item.type === 'task') {
                     expandTask = new St.Button({
-                        child: new St.Icon({icon_name: 'text-x-generic-symbolic', icon_size: 12,
+                        child: new St.Icon({icon_name: 'text-x-generic-symbolic', icon_size: 16,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: item.expanded ? 'Свернуть комментарий' : 'Показать комментарий',
@@ -931,7 +931,7 @@
                 if (item.type === 'task' && item.level <
                     Math.max(0, Number(cfg.behavior.maxLevel) || 5)) {
                     addSubtask = new St.Button({
-                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 12,
+                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: 'Добавить подзадачу',
@@ -953,7 +953,7 @@
                         style_class: 'overview-todo-heading-action-hint',
                     });
                     const addContent = new St.BoxLayout({style_class: 'overview-todo-heading-action-content'});
-                    addContent.add_child(new St.Icon({icon_name: 'list-add-symbolic', icon_size: 12,
+                    addContent.add_child(new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
                         x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER}));
                     addContent.add_child(hint);
                     const addTaskToHeading = new St.Button({
@@ -972,7 +972,7 @@
                     row.add_child(addTaskToHeading);
                 }
 
-                const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 12,
+                const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16,
                     x_align: Clutter.ActorAlign.CENTER,
                     y_align: Clutter.ActorAlign.CENTER});
                 // This symbolic glyph is drawn above its actor's visual center.
