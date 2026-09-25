@@ -64,6 +64,19 @@ export async function run() {
         runtime._rowWidgets[1].entryText.has_key_focus())
         throw new Error('Opening did not restore the selected row without editing');
     console.log('PROBE PASS: opening focuses first or selected row without editing');
+    const buttonsIn = actor => [
+        ...(actor instanceof St.Button ? [actor] : []),
+        ...actor.get_children().flatMap(buttonsIn),
+    ];
+    for (const button of [...buttonsIn(runtime._card), ...buttonsIn(runtime._undoBar),
+        runtime._resizeHandle]) {
+        if (!button.accessible_name?.trim())
+            throw new Error(`Button has no accessible name: ${button.style_class}`);
+    }
+    if (runtime._rowWidgets[0].remove.accessible_name !== 'Удалить список «Сегодня»' ||
+        runtime._rowWidgets[1].remove.accessible_name !== 'Удалить задачу «Подготовить релиз»')
+        throw new Error('Delete names do not distinguish tasks from lists');
+    console.log('PROBE PASS: buttons have accessible names and deletion names identify items');
     for (const i of [0, 4, 5]) {
         const row = runtime._rowWidgets[i].row;
         for (const button of row.get_children().filter(actor =>

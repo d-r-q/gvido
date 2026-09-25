@@ -391,6 +391,7 @@
 
             const addTask = new St.Button({
                 label: cfg.ui.addTaskLabel,
+                accessible_name: 'Добавить задачу',
                 can_focus: true,
                 style_class: 'overview-todo-action overview-todo-action-primary',
             });
@@ -398,6 +399,7 @@
 
             const addHeading = new St.Button({
                 label: cfg.ui.addHeadingLabel,
+                accessible_name: 'Добавить список',
                 can_focus: true,
                 style_class: 'overview-todo-action overview-todo-action-secondary',
             });
@@ -437,6 +439,7 @@
             });
             const undoButton = new St.Button({
                 label: 'Отменить',
+                accessible_name: 'Отменить удаление',
                 can_focus: true,
                 style_class: 'overview-todo-undo-button',
             });
@@ -1642,6 +1645,9 @@
                 `padding-left: ${item.level * indentPx}px; min-height: ${rowHeight}px;`
             );
             widgets.entry.set_style_class_name(this._entryClass(item));
+            const itemName = item.text.split(/\r?\n/, 1)[0].trim() || 'Без названия';
+            widgets.remove.accessible_name = item.type === 'heading'
+                ? `Удалить список «${itemName}»` : `Удалить задачу «${itemName}»`;
             if (widgets.preview) {
                 const [title, ...comment] = item.text.split(/\r?\n/);
                 widgets.previewTitle.text = title;
