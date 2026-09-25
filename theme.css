@@ -15,12 +15,17 @@
   padding: 0;
   color: #a3a6ae;
   background-color: transparent;
+  border: 1px solid transparent;
   border-radius: 6px;
   font-size: 1.25em;
 }
 .overview-todo-resize-handle:hover {
   color: #3584e4;
   background-color: #e9e9ee;
+}
+.overview-todo-resize-handle:focus {
+  color: #1c71d8;
+  border-color: #3584e4;
 }
 
 .overview-todo-toolbar {

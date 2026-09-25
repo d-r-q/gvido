@@ -449,11 +449,13 @@
 
             this._resizeHandle = new St.Button({
                 label: '⋱',
-                accessible_name: 'Изменить размер виджета',
+                accessible_name: 'Изменить размер виджета стрелками',
                 reactive: true,
-                can_focus: false,
+                can_focus: true,
                 style_class: 'overview-todo-resize-handle',
             });
+            this._resizeHandle.connect('key-press-event', (_actor, event) =>
+                this._handleResizeKey(event));
             this._resizeHandle.connect('button-press-event', (_actor, event) => {
                 if (event.get_button() !== 1)
                     return Clutter.EVENT_PROPAGATE;
@@ -540,6 +542,28 @@
                 }
                 return Clutter.EVENT_PROPAGATE;
             });
+        }
+
+        _handleResizeKey(event) {
+            const step = event.get_state() & Clutter.ModifierType.SHIFT_MASK ? 1 : 10;
+            const symbol = event.get_key_symbol();
+            let width = this._card.width;
+            let height = this._card.height;
+            if (symbol === Clutter.KEY_Left)
+                width += step;
+            else if (symbol === Clutter.KEY_Right)
+                width -= step;
+            else if (symbol === Clutter.KEY_Up)
+                height -= step;
+            else if (symbol === Clutter.KEY_Down)
+                height += step;
+            else
+                return Clutter.EVENT_PROPAGATE;
+
+            this._sizeOverride = {width, height};
+            this._positionCard();
+            this._saveSize();
+            return Clutter.EVENT_STOP;
         }
 
         _cancelResize() {

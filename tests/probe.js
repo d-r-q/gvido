@@ -301,6 +301,35 @@ export async function run() {
     if (runtime._sizeOverride?.width !== 500 || runtime._sizeOverride?.height !== 500)
         throw new Error('Resize size did not persist');
     console.log('PROBE PASS: resize bounds and saved size');
+    runtime._resizeHandle.grab_key_focus();
+    if (!runtime._resizeHandle.has_key_focus())
+        throw new Error('Resize handle cannot receive keyboard focus');
+    const resizeKeyboard = Clutter.get_default_backend().get_default_seat()
+        .create_virtual_device(Clutter.VirtualDeviceType.KEYBOARD);
+    resizeKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Right, Clutter.KeyState.PRESSED);
+    resizeKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Right, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (runtime._card.width !== 490)
+        throw new Error('Right arrow did not shrink the widget');
+    resizeKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Down, Clutter.KeyState.PRESSED);
+    resizeKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Down, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (runtime._card.height !== 510)
+        throw new Error('Down arrow did not grow the widget');
+    const fineResize = {
+        get_key_symbol: () => Clutter.KEY_Left,
+        get_state: () => Clutter.ModifierType.SHIFT_MASK,
+    };
+    if (runtime._handleResizeKey(fineResize) !== Clutter.EVENT_STOP ||
+        runtime._card.width !== 491)
+        throw new Error('Shift+Left did not resize by one pixel');
+    runtime._sizeOverride = null;
+    runtime._loadSize();
+    if (runtime._sizeOverride?.width !== 491 || runtime._sizeOverride?.height !== 510)
+        throw new Error('Keyboard resize did not persist');
+    runtime._sizeOverride = {width: 500, height: 500};
+    runtime._positionCard();
+    console.log('PROBE PASS: focused resize handle responds to arrow keys');
     runtime._rowWidgets[4].row.get_children().find(child =>
         child.has_style_class_name('overview-todo-delete')).emit('clicked', 1);
     await delay(300);
