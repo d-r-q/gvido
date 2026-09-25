@@ -81,6 +81,11 @@ export async function run() {
     const parent = runtime._rowWidgets[1];
     if (!parent.expandChildren || runtime._rowWidgets[4].expandChildren)
         throw new Error('Subtask toggle is not limited to parent tasks');
+    const parentCheckboxX = parent.checkbox.get_transformed_position()[0];
+    const leafCheckboxX = runtime._rowWidgets[4].checkbox.get_transformed_position()[0];
+    if (Math.abs(parentCheckboxX - leafCheckboxX) > 1)
+        throw new Error('Checkboxes shift when a task has a subtask toggle');
+    console.log('PROBE PASS: checkbox position is independent of the subtask toggle');
     parent.expandChildren.emit('clicked', 1);
     if (runtime._rowWidgets[2].row.visible || runtime._rowWidgets[3].row.visible ||
         !runtime._rowWidgets[4].row.visible || runtime._items.length !== 8 ||
@@ -103,7 +108,7 @@ export async function run() {
         console.log(`MEASURE ${label} check=${check.get_size()} checkY=${check.get_transformed_position()[1]} rowY=${w.row.get_transformed_position()[1]} titleY=${w.previewTitle.get_transformed_position()[1]}`);
     };
     measure('collapsed');
-    runtime._rowWidgets[4].row.get_children().find(child => child.has_style_class_name('overview-todo-expand')).emit('clicked', 1);
+    runtime._rowWidgets[4].expandTask.emit('clicked', 1);
     await delay(1000);
     measure('expanded');
     const text = runtime._rowWidgets[4].entryText;
@@ -133,6 +138,11 @@ export async function run() {
     runtime._addTaskToHeading(5);
     await delay(300);
     const index = runtime._items.length - 1;
+    const contentGeometry = () => {
+        const content = runtime._rowWidgets[index].entry.get_parent();
+        return [content.get_transformed_position()[0], content.get_transformed_size()[0]];
+    };
+    const geometryWithoutComment = contentGeometry();
     const editor = runtime._rowWidgets[index].entryText;
     editor.set_text('Новое дело');
     editor.insert_text('\n', -1);
@@ -142,6 +152,10 @@ export async function run() {
     currentEditor.insert_text('коммент', -1);
     currentEditor.set_cursor_position(3);
     await delay(300);
+    const geometryWithComment = contentGeometry();
+    if (geometryWithComment.some((value, i) =>
+        Math.abs(value - geometryWithoutComment[i]) > 1))
+        throw new Error('Comment toggle moved or resized task text');
     if (!runtime._rowWidgets[index].expandTask?.visible)
         throw new Error('Missing expand button after typing a new comment');
     if (runtime._rowWidgets[index].entryText !== editor || editor.get_cursor_position() !== 3)
@@ -162,6 +176,10 @@ export async function run() {
     runtime._rowWidgets[index].entryText.set_text('Новое дело\n');
     if (runtime._rowWidgets[index].expandTask.visible)
         throw new Error('Expand button remains after deleting the comment');
+    await delay(100);
+    if (contentGeometry().some((value, i) =>
+        Math.abs(value - geometryWithoutComment[i]) > 1))
+        throw new Error('Removing the comment toggle moved or resized task text');
     console.log('PROBE PASS: new comment toggle, stable editor/caret, collapse/expand, comment deletion');
 
     const undoKey = {
@@ -396,6 +414,24 @@ export async function run() {
         {type: 'task', level: 0, text: 'Соседняя', done: false},
     ];
     runtime._renderItems();
+    const combinedRow = runtime._rowWidgets[0];
+    const combinedActors = combinedRow.row.get_children();
+    if (!(combinedActors.indexOf(combinedRow.expandChildren.get_parent()) <
+        combinedActors.indexOf(combinedRow.checkbox) &&
+        combinedActors.indexOf(combinedRow.checkbox) <
+        combinedActors.indexOf(combinedRow.entry.get_parent()) &&
+        combinedActors.indexOf(combinedRow.entry.get_parent()) <
+        combinedActors.indexOf(combinedRow.expandTask.get_parent())) ||
+        combinedRow.expandTask.child.icon_name !== 'text-x-generic-symbolic' ||
+        combinedRow.expandChildren.child.icon_name !== 'pan-down-symbolic')
+        throw new Error('Task and comment toggles are not visually distinct or correctly placed');
+    runtime._showActionTooltip(combinedRow.expandChildren);
+    if (runtime._actionTooltip.text !== 'Свернуть подзадачи')
+        throw new Error('Subtask tooltip does not describe its action');
+    runtime._showActionTooltip(combinedRow.expandTask);
+    if (runtime._actionTooltip.text !== 'Показать комментарий')
+        throw new Error('Comment tooltip does not describe its action');
+    runtime._hideActionTooltip();
     runtime._rowWidgets[1].expandChildren.emit('clicked', 1);
     runtime._rowWidgets[0].expandChildren.emit('clicked', 1);
     runtime._rowWidgets[0].expandTask.emit('clicked', 1);

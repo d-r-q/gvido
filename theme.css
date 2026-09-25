@@ -173,6 +173,11 @@
   border-radius: 7px;
   transition-duration: 120ms;
 }
+.overview-todo-children-slot,
+.overview-todo-comment-slot {
+  width: 24px;
+  height: 28px;
+}
 .overview-todo-drag-handle {
   width: 12px;
   color: #d3d5db;
@@ -189,6 +194,13 @@
 .overview-todo-add-to-heading:focus,
 .overview-todo-delete:focus,
 .overview-todo-drag-handle:focus { border-color: #3584e4; }
+.overview-todo-tooltip {
+  padding: 5px 8px;
+  color: #ffffff;
+  background-color: #30353d;
+  border-radius: 6px;
+  font-size: 11px;
+}
 .overview-todo-delete:hover {
   color: #c01c28;
   background-color: #fbe9eb;

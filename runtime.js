@@ -177,6 +177,8 @@
             this._dropIndicatorIndex = -1;
             this._undo = null;
             this._undoSourceId = 0;
+            this._actionTooltip = null;
+            this._actionTooltipOwner = null;
             this._textHistory = new WeakMap();
             this._restoringText = false;
         }
@@ -228,6 +230,7 @@
 
         disable() {
             this._flushSave();
+            this._hideActionTooltip();
             this._cancelDrag();
             this._cancelResize();
 
@@ -546,6 +549,8 @@
             if (!this._list)
                 return;
 
+            this._hideActionTooltip();
+
             if (this._selectedIndex >= this._items.length)
                 this._selectedIndex = this._items.length - 1;
 
@@ -610,6 +615,42 @@
                     dragHandle.reactive = false;
                 }
                 row.add_child(dragHandle);
+
+                let expandChildren = null;
+                if (item.type === 'task' && this._blockRange(index).end > index + 1) {
+                    expandChildren = new St.Button({
+                        child: new St.Icon({
+                            icon_name: item.childrenCollapsed ? 'pan-end-symbolic' : 'pan-down-symbolic',
+                            icon_size: 12,
+                        }),
+                        accessible_name: item.childrenCollapsed
+                            ? 'Показать подзадачи' : 'Свернуть подзадачи',
+                        can_focus: true,
+                        y_align: Clutter.ActorAlign.START,
+                        style_class: 'overview-todo-expand overview-todo-children-toggle',
+                    });
+                    expandChildren.connect('key-focus-in', () => this._selectItem(index));
+                    this._bindActionTooltip(expandChildren);
+                    expandChildren.connect('clicked', () => {
+                        this._selectItem(index);
+                        item.childrenCollapsed = !item.childrenCollapsed;
+                        expandChildren.child.icon_name = item.childrenCollapsed
+                            ? 'pan-end-symbolic' : 'pan-down-symbolic';
+                        expandChildren.accessible_name = item.childrenCollapsed
+                            ? 'Показать подзадачи' : 'Свернуть подзадачи';
+                        if (expandChildren.hover)
+                            this._showActionTooltip(expandChildren);
+                        this._updateChildrenVisibility();
+                        this._positionCard();
+                    });
+                }
+                if (item.type === 'task') {
+                    row.add_child(new St.Bin({
+                        child: expandChildren,
+                        y_align: Clutter.ActorAlign.START,
+                        style_class: 'overview-todo-children-slot',
+                    }));
+                }
 
                 let checkbox = null;
                 if (item.type === 'task') {
@@ -815,21 +856,19 @@
                     });
                     content.add_child(preview);
                 }
-                row.add_child(content);
-
                 let expandTask = null;
                 if (item.type === 'task') {
                     expandTask = new St.Button({
-                        child: new St.Icon({icon_name: item.expanded
-                            ? 'pan-up-symbolic' : 'pan-down-symbolic', icon_size: 12,
+                        child: new St.Icon({icon_name: 'text-x-generic-symbolic', icon_size: 12,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: item.expanded ? 'Свернуть комментарий' : 'Показать комментарий',
                         can_focus: true,
                         y_align: Clutter.ActorAlign.START,
-                        style_class: 'overview-todo-expand',
+                        style_class: 'overview-todo-expand overview-todo-comment-toggle',
                     });
                     expandTask.connect('key-focus-in', () => this._selectItem(index));
+                    this._bindActionTooltip(expandTask);
                     expandTask.connect('clicked', () => {
                         this._selectItem(index);
                         if (entryText.has_key_focus())
@@ -842,36 +881,18 @@
                             ? item.text.split(/\r?\n/, 1)[0] : item.text);
                         updatingEntry = false;
                         this._updateRowAppearance(index);
+                        if (expandTask.hover)
+                            this._showActionTooltip(expandTask);
                         this._positionCard();
                     });
-                    row.add_child(expandTask);
                 }
-
-                let expandChildren = null;
-                if (item.type === 'task' && this._blockRange(index).end > index + 1) {
-                    expandChildren = new St.Button({
-                        child: new St.Icon({
-                            icon_name: item.childrenCollapsed ? 'pan-end-symbolic' : 'pan-down-symbolic',
-                            icon_size: 12,
-                        }),
-                        accessible_name: item.childrenCollapsed
-                            ? 'Показать подзадачи' : 'Свернуть подзадачи',
-                        can_focus: true,
+                row.add_child(content);
+                if (expandTask) {
+                    row.add_child(new St.Bin({
+                        child: expandTask,
                         y_align: Clutter.ActorAlign.START,
-                        style_class: 'overview-todo-expand',
-                    });
-                    expandChildren.connect('key-focus-in', () => this._selectItem(index));
-                    expandChildren.connect('clicked', () => {
-                        this._selectItem(index);
-                        item.childrenCollapsed = !item.childrenCollapsed;
-                        expandChildren.child.icon_name = item.childrenCollapsed
-                            ? 'pan-end-symbolic' : 'pan-down-symbolic';
-                        expandChildren.accessible_name = item.childrenCollapsed
-                            ? 'Показать подзадачи' : 'Свернуть подзадачи';
-                        this._updateChildrenVisibility();
-                        this._positionCard();
-                    });
-                    row.add_child(expandChildren);
+                        style_class: 'overview-todo-comment-slot',
+                    }));
                 }
 
                 if (item.type === 'heading') {
@@ -930,6 +951,38 @@
             });
             this._updateChildrenVisibility();
             this._positionCard();
+        }
+
+        _bindActionTooltip(button) {
+            button.connect('notify::hover', () => {
+                if (button.hover)
+                    this._showActionTooltip(button);
+                else if (this._actionTooltipOwner === button)
+                    this._hideActionTooltip();
+            });
+        }
+
+        _showActionTooltip(button) {
+            this._hideActionTooltip();
+            const tooltip = new St.Label({
+                text: button.accessible_name,
+                style_class: 'overview-todo-tooltip',
+            });
+            Main.layoutManager.overviewGroup.add_child(tooltip);
+            const [x, y] = button.get_transformed_position();
+            const [, height] = button.get_transformed_size();
+            const width = tooltip.get_preferred_width(-1)[1];
+            const monitor = Main.layoutManager.primaryMonitor;
+            tooltip.set_position(clamp(x, monitor.x,
+                monitor.x + monitor.width - width), y + height + 4);
+            this._actionTooltip = tooltip;
+            this._actionTooltipOwner = button;
+        }
+
+        _hideActionTooltip() {
+            this._actionTooltip?.destroy();
+            this._actionTooltip = null;
+            this._actionTooltipOwner = null;
         }
 
         _updateChildrenVisibility() {
@@ -1483,8 +1536,6 @@
             if (widgets.expandTask) {
                 widgets.expandTask.visible = item.text.split(/\r?\n/)
                     .filter(line => line.trim()).length >= 2;
-                widgets.expandTask.child.icon_name = item.expanded
-                    ? 'pan-up-symbolic' : 'pan-down-symbolic';
                 widgets.expandTask.accessible_name = item.expanded
                     ? 'Свернуть комментарий' : 'Показать комментарий';
             }
