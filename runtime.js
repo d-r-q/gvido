@@ -626,6 +626,7 @@
                     can_focus: true,
                     track_hover: true,
                     style_class: 'overview-todo-row',
+                    style: `padding-left: ${item.level * Math.max(0, Number(cfg.behavior.indentPx) || 0)}px; min-height: 38px;`,
                 });
 
                 if (index === this._selectedIndex)
@@ -790,12 +791,16 @@
                 entryText.can_focus = true;
                 entryText.set_single_line_mode(item.type !== 'task');
                 entryText.set_line_wrap(true);
+                // Zero is Pango.EllipsizeMode.NONE; otherwise St.Label clips wrapped text.
+                if (item.type === 'task')
+                    entryText.set_ellipsize(0);
                 let preview = null;
                 const setEditing = editing => {
                     const showPreview = !editing && item.type === 'task';
                     entry.visible = !showPreview;
                     if (preview)
                         preview.visible = showPreview;
+                    this._updateRowHeight(index);
                 };
                 entryText.connect('key-focus-in', () => {
                     this._selectItem(index);
@@ -946,6 +951,7 @@
                         style_class: 'overview-todo-comment',
                     });
                     previewTitle.clutter_text.set_line_wrap(true);
+                    previewTitle.clutter_text.set_ellipsize(0);
                     previewComment.clutter_text.set_line_wrap(true);
                     previewContent.add_child(previewTitle);
                     previewContent.add_child(previewComment);
@@ -1073,11 +1079,21 @@
                 this._rowWidgets[index] = {row, selectionMark, entry, entryText, checkbox, dragHandle,
                     expandTask, expandChildren, expandList, preview, previewTitle, previewComment,
                     addSubtask, remove, setEditing};
+                entry.connect('notify::height', () => this._updateRowHeight(index));
+                previewTitle?.connect('notify::height', () => this._updateRowHeight(index));
                 this._updateRowAppearance(index);
                 this._updateDeleteVisibility(index);
             });
             this._updateFoldVisibility();
             this._positionCard();
+            const rows = this._rowWidgets;
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                if (this._rowWidgets === rows && this._card?.get_stage()) {
+                    rows.forEach((_, index) => this._updateRowHeight(index));
+                    this._positionCard();
+                }
+                return GLib.SOURCE_REMOVE;
+            });
         }
 
         _bindActionTooltip(button) {
@@ -1750,15 +1766,6 @@
             const widgets = this._rowWidgets[index];
             if (!item || !widgets)
                 return;
-
-            const indentPx = Math.max(0, Number(cfg.behavior.indentPx) || 0);
-            const lineCount = item.type === 'task' && item.expanded
-                ? Math.max(1, item.text.split(/\r?\n/).length)
-                : 1;
-            const rowHeight = Math.max(38, lineCount * 24 + 14);
-            widgets.row.set_style(
-                `padding-left: ${item.level * indentPx}px; min-height: ${rowHeight}px;`
-            );
             widgets.entry.set_style_class_name(this._entryClass(item));
             const itemName = item.text.split(/\r?\n/, 1)[0].trim() || 'Без названия';
             widgets.remove.accessible_name = item.type === 'heading'
@@ -1779,6 +1786,28 @@
                 widgets.expandTask.accessible_name = item.expanded
                     ? 'Свернуть комментарий' : 'Показать комментарий';
             }
+            this._updateRowHeight(index);
+        }
+
+        _updateRowHeight(index) {
+            const item = this._items[index];
+            const widgets = this._rowWidgets[index];
+            if (!item || !widgets)
+                return;
+            if (!widgets.row.get_stage())
+                return;
+
+            const lineCount = item.type === 'task' && item.expanded
+                ? Math.max(1, item.text.split(/\r?\n/).length)
+                : 1;
+            const content = widgets.preview?.visible ? widgets.preview : widgets.entry;
+            const wrappedHeight = content.width > 0 && content.get_stage()
+                ? content.get_preferred_height(content.width)[1] : 0;
+            const rowHeight = Math.max(38, lineCount * 24 + 14, wrappedHeight);
+            const indentPx = Math.max(0, Number(cfg.behavior.indentPx) || 0);
+            const style = `padding-left: ${item.level * indentPx}px; min-height: ${rowHeight}px;`;
+            if (widgets.row.get_style() !== style)
+                widgets.row.set_style(style);
         }
 
         _addItem(type) {

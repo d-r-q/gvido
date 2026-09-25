@@ -125,6 +125,31 @@ export async function run() {
     if (!runtime._rowWidgets[2].row.visible || !runtime._rowWidgets[3].row.visible)
         throw new Error('Expanding a task did not restore its subtasks');
     console.log('PROBE PASS: task disclosure hides descendants and skips them in navigation');
+    const longTitleItem = runtime._items[1];
+    const originalTitle = longTitleItem.text;
+    longTitleItem.text = 'Подготовить подробный план выпуска с проверкой всех изменений и согласованием оставшихся задач команды перед публикацией';
+    runtime._rowWidgets[1].entryText.set_text(longTitleItem.text);
+    await delay(300);
+    const longTitleWidgets = runtime._rowWidgets[1];
+    const titleLines = longTitleWidgets.previewTitle.clutter_text.get_layout().get_line_count();
+    const titleHeight = longTitleWidgets.previewTitle.height;
+    const rowHeight = longTitleWidgets.row.height;
+    await screenshot('long-title', runtime._card);
+    if (titleLines < 2 || titleHeight < 35 || rowHeight < longTitleWidgets.preview.height)
+        throw new Error('Long task title did not wrap into a fully visible row');
+    longTitleWidgets.preview.emit('clicked', 1);
+    await delay(100);
+    if (!longTitleWidgets.entryText.has_key_focus() ||
+        longTitleWidgets.entryText.get_text() !== longTitleItem.text ||
+        longTitleWidgets.row.height < longTitleWidgets.entry.height)
+        throw new Error('Long task title overflowed the row while editing');
+    runtime._card.grab_key_focus();
+    longTitleItem.text = originalTitle;
+    longTitleWidgets.entryText.set_text(originalTitle);
+    await delay(100);
+    if (longTitleWidgets.row.height > 100)
+        throw new Error('Row did not shrink after shortening the task title');
+    console.log('PROBE PASS: long task title wraps within the row');
     const firstList = runtime._rowWidgets[0].expandList;
     if (!firstList || runtime._rowWidgets[4].expandList ||
         firstList.accessible_name !== 'Свернуть список')
