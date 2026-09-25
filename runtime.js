@@ -1545,6 +1545,12 @@
                 return Clutter.EVENT_STOP;
             }
             if ((state & Clutter.ModifierType.CONTROL_MASK) &&
+                (symbol === Clutter.KEY_a || symbol === Clutter.KEY_A ||
+                    symbol === Clutter.KEY_Cyrillic_ef || symbol === Clutter.KEY_Cyrillic_EF)) {
+                entryText.set_selection(0, -1);
+                return Clutter.EVENT_STOP;
+            }
+            if ((state & Clutter.ModifierType.CONTROL_MASK) &&
                 (symbol === Clutter.KEY_z || symbol === Clutter.KEY_Z ||
                     symbol === Clutter.KEY_Cyrillic_ya || symbol === Clutter.KEY_Cyrillic_YA)) {
                 this._restoreText(index, entryText,

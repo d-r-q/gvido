@@ -834,6 +834,15 @@ export async function run() {
     const keyboard = Clutter.get_default_backend().get_default_seat()
         .create_virtual_device(Clutter.VirtualDeviceType.KEYBOARD);
     keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_a, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_a, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (focusedEditor.get_selection() !== 'Первое дело!' ||
+        !focusedEditor.has_key_focus())
+        throw new Error('Ctrl+A did not select all text in the editor');
+    console.log('PROBE PASS: Ctrl+A selects all editor text');
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
     keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_z, Clutter.KeyState.PRESSED);
     keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_z, Clutter.KeyState.RELEASED);
     keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
@@ -861,6 +870,17 @@ export async function run() {
         !focusedEditor.has_key_focus())
         throw new Error(`Russian Ctrl+Z key event escaped to Overview search: text=${focusRuntime._items[1].text}, focus=${global.stage.get_key_focus()}`);
     console.log('PROBE PASS: actual Ctrl+Z key event stays in the editor for English and Russian layouts');
+    focusedEditor.set_text('Первое дело');
+    focusedEditor.set_cursor_position(3);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_ef, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_ef, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (focusedEditor.get_selection() !== 'Первое дело' ||
+        !focusedEditor.has_key_focus())
+        throw new Error('Russian Ctrl+A did not select all editor text');
+    console.log('PROBE PASS: Russian Ctrl+A selects all editor text');
     focusRuntime._addItem('task');
     await delay(300);
     if (focusRuntime._items[0].type !== 'task' ||
