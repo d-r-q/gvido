@@ -250,6 +250,29 @@ export async function run() {
     runtime._rowWidgets[4].expandTask.emit('clicked', 1);
     console.log('PROBE PASS: Ctrl+Z/Ctrl+Shift+Z undo text per item and preserve comments');
 
+    await delay(100);
+    const cancelTask = runtime._items[4];
+    const beforeEdit = {text: cancelTask.text, level: cancelTask.level,
+        expanded: cancelTask.expanded};
+    runtime._rowWidgets[4].preview.emit('clicked', 1);
+    runtime._rowWidgets[4].entryText.set_text('Черновик');
+    cancelTask.level = 2;
+    runtime._queueRender(4);
+    await delay(150);
+    const cancelEditor = runtime._rowWidgets[4].entryText;
+    cancelEditor.set_text('Другой черновик');
+    const escapeKey = {
+        get_key_symbol: () => Clutter.KEY_Escape,
+        get_state: () => 0,
+    };
+    if (runtime._handleEditorShortcut(4, escapeKey, cancelEditor) !== Clutter.EVENT_STOP ||
+        cancelTask.text !== beforeEdit.text || cancelTask.level !== beforeEdit.level ||
+        cancelTask.expanded !== beforeEdit.expanded ||
+        !runtime._rowWidgets[4].row.has_key_focus() ||
+        runtime._rowWidgets[4].entryText.has_key_focus())
+        throw new Error('Escape did not cancel the full inline edit after rebuild');
+    console.log('PROBE PASS: Escape cancels inline edits across editor rebuilds');
+
     runtime._sizeOverride = {width: 500, height: 500};
     runtime._positionCard();
     if (runtime._card.width !== 500 || runtime._card.height !== 500 ||

@@ -180,6 +180,7 @@
             this._actionTooltip = null;
             this._actionTooltipOwner = null;
             this._textHistory = new WeakMap();
+            this._editSnapshots = new WeakMap();
             this._restoringText = false;
         }
 
@@ -198,6 +199,7 @@
             this._dropIndicatorIndex = -1;
             this._undo = null;
             this._textHistory = new WeakMap();
+            this._editSnapshots = new WeakMap();
 
             this._ensureFile();
             this._loadItems();
@@ -735,6 +737,18 @@
                 entryText.connect('key-focus-in', () => {
                     this._selectItem(index);
                     const history = this._textHistory.get(item);
+                    if (!this._editSnapshots.has(item)) {
+                        this._editSnapshots.set(item, {
+                            text: item.text,
+                            level: item.level,
+                            expanded: item.expanded,
+                            history: history ? {
+                                undo: [...history.undo],
+                                redo: [...history.redo],
+                                lastChange: history.lastChange,
+                            } : null,
+                        });
+                    }
                     if (history)
                         history.lastChange = null;
                     setEditing(true);
@@ -763,6 +777,13 @@
                         });
                     } else {
                         setEditing(false);
+                        this._flushSave();
+                        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                            const currentIndex = this._items.indexOf(item);
+                            if (!this._rowWidgets[currentIndex]?.entryText.has_key_focus())
+                                this._editSnapshots.delete(item);
+                            return GLib.SOURCE_REMOVE;
+                        });
                     }
                 });
                 // Theme colors have the native color type required by this
@@ -826,12 +847,8 @@
                     }
 
                     if (isEnter) {
+                        this._editSnapshots.delete(item);
                         this._flushSave();
-                        this._selectItem(index, true);
-                        return Clutter.EVENT_STOP;
-                    }
-
-                    if (symbol === Clutter.KEY_Escape) {
                         this._selectItem(index, true);
                         return Clutter.EVENT_STOP;
                     }
@@ -1429,9 +1446,40 @@
             this._scheduleSave();
         }
 
+        _cancelEdit(index, entryText) {
+            const item = this._items[index];
+            const snapshot = item && this._editSnapshots.get(item);
+            if (snapshot) {
+                item.text = snapshot.text;
+                item.level = snapshot.level;
+                item.expanded = snapshot.expanded;
+                if (snapshot.history)
+                    this._textHistory.set(item, snapshot.history);
+                else
+                    this._textHistory.delete(item);
+                this._restoringText = true;
+                try {
+                    const collapsed = item.type === 'task' && !item.expanded &&
+                        item.text.split(/\r?\n/).filter(line => line.trim()).length >= 2;
+                    entryText.set_text(collapsed ? item.text.split(/\r?\n/, 1)[0] : item.text);
+                } finally {
+                    this._restoringText = false;
+                }
+                this._editSnapshots.delete(item);
+                this._updateRowAppearance(index);
+                this._positionCard();
+                this._scheduleSave();
+            }
+            this._selectItem(index, true);
+        }
+
         _handleEditorShortcut(index, event, entryText) {
             const symbol = event.get_key_symbol();
             const state = event.get_state();
+            if (symbol === Clutter.KEY_Escape) {
+                this._cancelEdit(index, entryText);
+                return Clutter.EVENT_STOP;
+            }
             if ((state & Clutter.ModifierType.CONTROL_MASK) &&
                 (symbol === Clutter.KEY_z || symbol === Clutter.KEY_Z ||
                     symbol === Clutter.KEY_Cyrillic_ya || symbol === Clutter.KEY_Cyrillic_YA)) {
