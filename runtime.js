@@ -1876,7 +1876,7 @@
             this._items.splice(index, 0, item);
             this._newItems.add(item);
             this._scheduleSave();
-            this._queueRender(index, true);
+            this._queueRender(index, true, -1, null, -1, true);
         }
 
         _discardNewItem(index) {
@@ -1891,7 +1891,7 @@
         }
 
         _queueRender(focusIndex = -1, selectAll = false, focusRowIndex = -1,
-            editingState = null, focusHandleIndex = -1) {
+            editingState = null, focusHandleIndex = -1, scrollToFocus = false) {
             if (this._renderSourceId)
                 GLib.Source.remove(this._renderSourceId);
 
@@ -1926,6 +1926,20 @@
                     this._selectItem(focusRowIndex, true);
                 } else {
                     this._card.grab_key_focus();
+                }
+
+                if (scrollToFocus) {
+                    const row = this._rowWidgets[focusIndex]?.row;
+                    if (row) {
+                        const allocationId = row.connect('notify::allocation', () => {
+                            row.disconnect(allocationId);
+                            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                                if (this._rowWidgets[focusIndex]?.row === row && row.get_stage())
+                                    this._ensureSelectionVisible(row);
+                                return GLib.SOURCE_REMOVE;
+                            });
+                        });
+                    }
                 }
 
                 return GLib.SOURCE_REMOVE;

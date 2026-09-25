@@ -1056,6 +1056,35 @@ export async function run() {
         !focusRuntime._rowWidgets[0].row.has_key_focus())
         throw new Error('Escape removed a new item after text was entered');
     console.log('PROBE PASS: Escape discards untouched new tasks and headings, but cancels edits after input');
+    focusRuntime._items = [
+        {type: 'heading', level: 0, text: 'Длинный список'},
+        ...Array.from({length: 30}, (_, i) => ({
+            type: 'task', level: 0, text: `Задача ${i + 1}`, done: false,
+        })),
+    ];
+    focusRuntime._renderItems();
+    focusRuntime._card.set_size(430, 300);
+    await delay(150);
+    const newRowInViewport = () => {
+        const row = focusRuntime._rowWidgets[focusRuntime._selectedIndex].row;
+        const [, top] = row.get_transformed_position();
+        const [, height] = row.get_transformed_size();
+        const [, viewportTop] = focusRuntime._scroll.get_transformed_position();
+        const [, viewportHeight] = focusRuntime._scroll.get_transformed_size();
+        return top >= viewportTop && top + height <= viewportTop + viewportHeight;
+    };
+    focusRuntime._addItem('heading');
+    await delay(200);
+    if (!newRowInViewport())
+        throw new Error('New heading at the end was not scrolled into view');
+    const adjustment = focusRuntime._scroll.get_vadjustment();
+    adjustment.set_value(adjustment.get_upper() - adjustment.get_page_size());
+    await delay(100);
+    focusRuntime._addItem('task');
+    await delay(200);
+    if (!newRowInViewport())
+        throw new Error('New task near the start was not scrolled into view');
+    console.log('PROBE PASS: new rows scroll into the viewport from either end');
     focusRuntime.disable();
     console.log('PROBE COMPLETE');
     global.context.terminate();
