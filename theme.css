@@ -244,3 +244,67 @@
 }
 .overview-todo-undo-button:hover { background-color: #edf4fd; }
 .overview-todo-undo-button:focus { border-color: #3584e4; }
+
+/* Explicit widget colors otherwise mask the system High Contrast setting. */
+.overview-todo-card.high-contrast,
+.overview-todo-undo-bar.high-contrast {
+  color: #000000;
+  background-color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: none;
+}
+.overview-todo-card.high-contrast .overview-todo-title,
+.overview-todo-card.high-contrast .overview-todo-entry,
+.overview-todo-card.high-contrast .overview-todo-task,
+.overview-todo-card.high-contrast .overview-todo-heading,
+.overview-todo-card.high-contrast .overview-todo-comment {
+  color: #000000;
+}
+.overview-todo-card.high-contrast .overview-todo-comment {
+  border-left-color: #000000;
+}
+.overview-todo-card.high-contrast .overview-todo-row.selected,
+.overview-todo-card.high-contrast .overview-todo-row.selected:hover {
+  background-color: #ffffff;
+  border: 2px solid #000000;
+}
+.overview-todo-card.high-contrast .overview-todo-selection-mark {
+  background-color: #000000;
+}
+.overview-todo-card.high-contrast .overview-todo-action,
+.overview-todo-card.high-contrast .overview-todo-check-indicator {
+  color: #000000;
+  background-color: #ffffff;
+  border: 2px solid #000000;
+}
+.overview-todo-card.high-contrast .overview-todo-action-primary,
+.overview-todo-card.high-contrast .overview-todo-check-indicator.checked {
+  color: #ffffff;
+  background-color: #000000;
+}
+.overview-todo-card.high-contrast .overview-todo-drag-handle,
+.overview-todo-card.high-contrast .overview-todo-expand,
+.overview-todo-card.high-contrast .overview-todo-add-to-heading,
+.overview-todo-card.high-contrast .overview-todo-delete,
+.overview-todo-undo-bar.high-contrast .overview-todo-undo-button,
+.overview-todo-resize-handle.high-contrast {
+  color: #000000;
+}
+.overview-todo-card.high-contrast .overview-todo-entry {
+  selection-background-color: #000000;
+  selected-color: #ffffff;
+}
+.overview-todo-card.high-contrast .overview-todo-entry:focus,
+.overview-todo-card.high-contrast .overview-todo-preview:focus,
+.overview-todo-card.high-contrast .overview-todo-action:focus,
+.overview-todo-card.high-contrast .overview-todo-check-hit:focus,
+.overview-todo-card.high-contrast .overview-todo-drag-handle:focus,
+.overview-todo-card.high-contrast .overview-todo-expand:focus,
+.overview-todo-card.high-contrast .overview-todo-add-to-heading:focus,
+.overview-todo-card.high-contrast .overview-todo-delete:focus,
+.overview-todo-undo-bar.high-contrast .overview-todo-undo-button:focus,
+.overview-todo-resize-handle.high-contrast:focus {
+  color: #000000;
+  background-color: #ffff00;
+  border-color: #000000;
+}

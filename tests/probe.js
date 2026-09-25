@@ -190,6 +190,20 @@ export async function run() {
     await delay(400);
     runtime._positionCard();
     console.log('PROBE PASS: Large Text scales font and card width');
+    const contrastSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.a11y.interface'});
+    contrastSettings.set_boolean('high-contrast', true);
+    runtime._updateContrast();
+    await delay(350);
+    await screenshot('high-contrast', runtime._card);
+    const handleColor = runtime._rowWidgets[0].dragHandle.get_theme_node().get_foreground_color();
+    if (!runtime._card.has_style_class_name('high-contrast') ||
+        !runtime._undoBar.has_style_class_name('high-contrast') ||
+        !runtime._resizeHandle.has_style_class_name('high-contrast') ||
+        handleColor.red > 64 || handleColor.green > 64 || handleColor.blue > 64)
+        throw new Error('High Contrast did not apply to widget and drag handles');
+    contrastSettings.set_boolean('high-contrast', false);
+    runtime._updateContrast();
+    await delay(350);
     runtime._card.set_width(330);
     await delay(300);
     await screenshot('narrow', runtime._card);
@@ -676,6 +690,15 @@ export async function run() {
     if (focusRuntime._card.width !== compactWidth)
         throw new Error('Widget width did not return after text-scale reset');
     console.log('PROBE PASS: enabled widget follows live text-scale changes');
+    contrastSettings.set_boolean('high-contrast', true);
+    await delay(150);
+    if (!focusRuntime._card.has_style_class_name('high-contrast'))
+        throw new Error('Enabled widget did not follow High Contrast setting');
+    contrastSettings.set_boolean('high-contrast', false);
+    await delay(150);
+    if (focusRuntime._card.has_style_class_name('high-contrast'))
+        throw new Error('Enabled widget did not leave High Contrast mode');
+    console.log('PROBE PASS: enabled widget follows live High Contrast changes');
     Main.overview.show();
     await delay(900);
     if (!focusRuntime._rowWidgets[0].row.has_key_focus() ||

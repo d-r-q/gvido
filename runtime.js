@@ -184,6 +184,8 @@
             this._restoringText = false;
             this._textSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
             this._textScaleChangedId = 0;
+            this._contrastSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.a11y.interface'});
+            this._contrastChangedId = 0;
         }
 
         enable() {
@@ -217,6 +219,8 @@
             this._positionCard();
             this._textScaleChangedId = this._textSettings.connect('changed::text-scaling-factor',
                 () => this._positionCard());
+            this._contrastChangedId = this._contrastSettings.connect('changed::high-contrast',
+                () => this._updateContrast());
 
             this._overviewShowingId = Main.overview.connect('showing', () => {
                 this._flushSave();
@@ -267,6 +271,10 @@
             if (this._textScaleChangedId) {
                 this._textSettings.disconnect(this._textScaleChangedId);
                 this._textScaleChangedId = 0;
+            }
+            if (this._contrastChangedId) {
+                this._contrastSettings.disconnect(this._contrastChangedId);
+                this._contrastChangedId = 0;
             }
 
             this._card?.destroy();
@@ -470,6 +478,19 @@
                 this._beginResize(...event.get_coords());
                 return Clutter.EVENT_STOP;
             });
+            this._updateContrast();
+        }
+
+        _updateContrast() {
+            const highContrast = this._contrastSettings.get_boolean('high-contrast');
+            for (const actor of [this._card, this._undoBar, this._resizeHandle]) {
+                if (!actor)
+                    continue;
+                if (highContrast)
+                    actor.add_style_class_name('high-contrast');
+                else
+                    actor.remove_style_class_name('high-contrast');
+            }
         }
 
         _positionCard() {
