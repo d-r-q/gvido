@@ -1344,9 +1344,12 @@
                 ? {type: 'heading', level: 0, text: cfg.ui.newHeadingText}
                 : {type: 'task', level: 0, text: cfg.ui.newTaskText, done: false};
 
-            this._items.push(item);
+            const firstHeading = this._items.findIndex(existing => existing.type === 'heading');
+            const insertIndex = type === 'task' && firstHeading >= 0
+                ? firstHeading : this._items.length;
+            this._items.splice(insertIndex, 0, item);
             this._scheduleSave();
-            this._queueRender(this._items.length - 1, true);
+            this._queueRender(insertIndex, true);
         }
 
         _addTaskToHeading(headingIndex) {

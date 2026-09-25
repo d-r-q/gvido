@@ -111,7 +111,7 @@ export async function run() {
     await delay(300);
     await screenshot('narrow', runtime._card);
     runtime._card.set_width(430);
-    runtime._addItem('task');
+    runtime._addTaskToHeading(5);
     await delay(300);
     const index = runtime._items.length - 1;
     const editor = runtime._rowWidgets[index].entryText;
@@ -350,6 +350,20 @@ export async function run() {
         focusRuntime._rowWidgets[1].entryText.has_key_focus())
         throw new Error('Overview reopening did not restore the selected row');
     console.log('PROBE PASS: Overview opening and reopening focus the selected row');
+    focusRuntime._addItem('task');
+    await delay(300);
+    if (focusRuntime._items[0].type !== 'task' ||
+        focusRuntime._items[1].type !== 'heading' ||
+        focusRuntime._selectedIndex !== 0 ||
+        !focusRuntime._rowWidgets[0].entryText.has_key_focus())
+        throw new Error('Global add did not insert a free task before the first list');
+    focusRuntime._addItem('task');
+    await delay(300);
+    if (focusRuntime._items[1].type !== 'task' ||
+        focusRuntime._items[2].type !== 'heading' ||
+        focusRuntime._selectedIndex !== 1)
+        throw new Error('Global add did not append to the free task block');
+    console.log('PROBE PASS: global add inserts free tasks before the first list');
     focusRuntime.disable();
     console.log('PROBE COMPLETE');
     global.context.terminate();
