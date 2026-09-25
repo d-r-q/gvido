@@ -174,6 +174,22 @@ export async function run() {
     runtime._card.grab_key_focus();
     await delay(300);
     await screenshot('design', runtime._card);
+    const textSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+    const normalWidth = runtime._card.width;
+    const taskFontSize = runtime._rowWidgets[1].entry.get_theme_node().get_font().get_size();
+    textSettings.set_double('text-scaling-factor', 1.5);
+    await delay(400);
+    const largeTaskFontSize = runtime._rowWidgets[1].entry.get_theme_node().get_font().get_size();
+    runtime._positionCard();
+    await delay(100);
+    await screenshot('large-text', runtime._card);
+    if (largeTaskFontSize <= taskFontSize || runtime._card.width <= normalWidth ||
+        runtime._card.x + runtime._card.width > 1000)
+        throw new Error(`Large Text did not scale font/card: ${taskFontSize} -> ${largeTaskFontSize}, width=${normalWidth} -> ${runtime._card.width}`);
+    textSettings.set_double('text-scaling-factor', 1);
+    await delay(400);
+    runtime._positionCard();
+    console.log('PROBE PASS: Large Text scales font and card width');
     runtime._card.set_width(330);
     await delay(300);
     await screenshot('narrow', runtime._card);
@@ -650,6 +666,16 @@ export async function run() {
     if (focusRuntime._card.height < 150 || focusRuntime._card.height >= 360)
         throw new Error(`Short list did not get a compact card: ${focusRuntime._card.height}`);
     console.log('PROBE PASS: short list uses compact card height');
+    const compactWidth = focusRuntime._card.width;
+    textSettings.set_double('text-scaling-factor', 1.5);
+    await delay(150);
+    if (focusRuntime._card.width <= compactWidth)
+        throw new Error('Live text-scale change did not resize the widget');
+    textSettings.set_double('text-scaling-factor', 1);
+    await delay(150);
+    if (focusRuntime._card.width !== compactWidth)
+        throw new Error('Widget width did not return after text-scale reset');
+    console.log('PROBE PASS: enabled widget follows live text-scale changes');
     Main.overview.show();
     await delay(900);
     if (!focusRuntime._rowWidgets[0].row.has_key_focus() ||

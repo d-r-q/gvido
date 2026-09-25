@@ -182,6 +182,8 @@
             this._textHistory = new WeakMap();
             this._editSnapshots = new WeakMap();
             this._restoringText = false;
+            this._textSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+            this._textScaleChangedId = 0;
         }
 
         enable() {
@@ -213,6 +215,8 @@
             Main.layoutManager.overviewGroup.add_child(this._resizeHandle);
             Main.layoutManager.overviewGroup.add_child(this._undoBar);
             this._positionCard();
+            this._textScaleChangedId = this._textSettings.connect('changed::text-scaling-factor',
+                () => this._positionCard());
 
             this._overviewShowingId = Main.overview.connect('showing', () => {
                 this._flushSave();
@@ -259,6 +263,10 @@
             if (this._monitorsChangedId) {
                 Main.layoutManager.disconnect(this._monitorsChangedId);
                 this._monitorsChangedId = 0;
+            }
+            if (this._textScaleChangedId) {
+                this._textSettings.disconnect(this._textScaleChangedId);
+                this._textScaleChangedId = 0;
             }
 
             this._card?.destroy();
@@ -473,14 +481,15 @@
                 return;
 
             const layout = cfg.layout;
+            const textScale = Math.max(1, this._textSettings.get_double('text-scaling-factor'));
             const margin = Math.max(0, Number(layout.margin) || 0);
             const panelGap = Math.max(0, Number(layout.panelGap) || 0);
             const panelHeight = Math.max(Main.layoutManager.panelBox.height || 0, 0);
 
             const defaultWidth = Math.round(clamp(
-                monitor.width * Number(layout.widthFraction || 0.30),
-                Number(layout.widthMin || 330),
-                Number(layout.widthMax || 430)
+                monitor.width * Number(layout.widthFraction || 0.30) * textScale,
+                Number(layout.widthMin || 330) * textScale,
+                Number(layout.widthMax || 430) * textScale
             ));
 
             const availableWidth = Math.max(1, monitor.width - margin * 2);
@@ -493,7 +502,7 @@
             ));
 
             const width = Math.round(clamp(this._sizeOverride?.width ?? defaultWidth,
-                Math.min(Number(layout.widthMin || 330), availableWidth),
+                Math.min(Number(layout.widthMin || 330) * textScale, availableWidth),
                 availableWidth));
             const listHeight = this._list?.get_preferred_height(Math.max(1, width - 40))[1] || 0;
             const naturalHeight = listHeight + 92;
