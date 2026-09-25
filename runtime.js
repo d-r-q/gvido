@@ -1559,6 +1559,16 @@
                 return Clutter.EVENT_STOP;
             }
             if ((state & Clutter.ModifierType.CONTROL_MASK) &&
+                (symbol === Clutter.KEY_x || symbol === Clutter.KEY_X ||
+                    symbol === Clutter.KEY_Cyrillic_che || symbol === Clutter.KEY_Cyrillic_CHE)) {
+                const selectedText = entryText.get_selection();
+                if (selectedText) {
+                    St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, selectedText);
+                    entryText.delete_selection();
+                }
+                return Clutter.EVENT_STOP;
+            }
+            if ((state & Clutter.ModifierType.CONTROL_MASK) &&
                 (symbol === Clutter.KEY_z || symbol === Clutter.KEY_Z ||
                     symbol === Clutter.KEY_Cyrillic_ya || symbol === Clutter.KEY_Cyrillic_YA)) {
                 this._restoreText(index, entryText,
