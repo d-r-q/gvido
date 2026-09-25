@@ -1272,7 +1272,8 @@
         _updateDeleteVisibility(index) {
             const widgets = this._rowWidgets[index];
             if (widgets?.remove)
-                widgets.remove.opacity = widgets.row.hover || widgets.remove.has_key_focus()
+                widgets.remove.opacity = widgets.row.hover || index === this._selectedIndex ||
+                    widgets.remove.has_key_focus()
                     ? 255 : 0;
         }
 
@@ -1462,7 +1463,7 @@
                 return Clutter.EVENT_STOP;
             }
             if (symbol === Clutter.KEY_Delete || symbol === Clutter.KEY_KP_Delete) {
-                if (this._items[index]?.type === 'task')
+                if (this._items[index])
                     this._deleteItem(index);
                 return Clutter.EVENT_STOP;
             }

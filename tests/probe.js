@@ -52,8 +52,9 @@ export async function run() {
         runtime._rowWidgets[0].entryText.has_key_focus())
         throw new Error('Opening did not focus the first row without editing');
     runtime._selectItem(1);
-    if (!runtime._rowWidgets[1].row.hover && runtime._rowWidgets[1].remove.opacity !== 0)
-        throw new Error('Selected task showed the delete button without hover');
+    if (runtime._rowWidgets[1].remove.opacity !== 255 ||
+        !runtime._rowWidgets[0].row.hover && runtime._rowWidgets[0].remove.opacity !== 0)
+        throw new Error('Delete button visibility did not follow the selected row');
     runtime._card.grab_key_focus();
     runtime._focusSelection();
     if (runtime._selectedIndex !== 1 || !runtime._rowWidgets[1].row.has_key_focus() ||
@@ -448,10 +449,19 @@ export async function run() {
     if (runtime._items.includes(secondTask) || runtime._items.length !== 4 ||
         runtime._rowWidgets[3].entryText.has_key_focus())
         throw new Error('Delete did not remove the selected task cleanly');
+    runtime._selectItem(1, true);
+    if (runtime._rowWidgets[1].remove.opacity !== 255)
+        throw new Error('Delete action is hidden on the selected heading');
     runtime._handleRowKey(1, deleteKey);
-    if (runtime._items.length !== 4 || runtime._items[1] !== secondHeading)
-        throw new Error('Delete removed a section heading');
-    console.log('PROBE PASS: Delete removes selected task, not editor text');
+    await delay(150);
+    if (runtime._items.length !== 3 || runtime._items.includes(secondHeading) ||
+        runtime._undoMessage.text !== 'Список удалён')
+        throw new Error('Delete did not remove the selected heading');
+    runtime._undoDelete();
+    await delay(150);
+    if (runtime._items[1] !== secondHeading)
+        throw new Error('Undo did not restore the selected heading');
+    console.log('PROBE PASS: Delete removes selected tasks and headings with Undo, not editor text');
     runtime._items = [
         {type: 'task', level: 0, text: 'Родитель\nКомментарий', done: false},
         {type: 'task', level: 1, text: 'Дочерняя', done: false},
