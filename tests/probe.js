@@ -55,6 +55,9 @@ export async function run() {
     if (runtime._rowWidgets[1].remove.opacity !== 255 ||
         !runtime._rowWidgets[0].row.hover && runtime._rowWidgets[0].remove.opacity !== 0)
         throw new Error('Delete button visibility did not follow the selected row');
+    if (runtime._rowWidgets[1].selectionMark.opacity !== 255 ||
+        runtime._rowWidgets[0].selectionMark.opacity !== 0)
+        throw new Error('Selected row does not have a non-color marker');
     runtime._card.grab_key_focus();
     runtime._focusSelection();
     if (runtime._selectedIndex !== 1 || !runtime._rowWidgets[1].row.has_key_focus() ||
@@ -343,8 +346,12 @@ export async function run() {
         get_state: () => 0,
     });
     if (runtime._selectedIndex !== 2 ||
-        !runtime._rowWidgets[2].row.has_key_focus())
+        !runtime._rowWidgets[2].row.has_key_focus() ||
+        runtime._rowWidgets[1].row.has_style_class_name('selected') ||
+        runtime._rowWidgets[1].selectionMark.opacity !== 0 ||
+        runtime._rowWidgets[2].selectionMark.opacity !== 255)
         throw new Error('Down arrow did not move selection');
+    await delay(100);
     await screenshot('selected-row', runtime._card);
     runtime._handleRowKey(2, {
         get_key_symbol: () => Clutter.KEY_Return,

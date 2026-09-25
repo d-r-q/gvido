@@ -573,6 +573,12 @@
 
                 if (index === this._selectedIndex)
                     row.add_style_class_name('selected');
+                const selectionMark = new St.Widget({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    opacity: index === this._selectedIndex ? 255 : 0,
+                    style_class: 'overview-todo-selection-mark',
+                });
+                row.add_child(selectionMark);
                 row.connect('notify::hover', () => this._updateDeleteVisibility(index));
                 row.connect('key-focus-in', () => this._selectItem(index));
                 row.connect('key-press-event', (_actor, event) =>
@@ -1011,7 +1017,7 @@
                 row.add_child(remove);
 
                 this._list.add_child(row);
-                this._rowWidgets[index] = {row, entry, entryText, checkbox, dragHandle,
+                this._rowWidgets[index] = {row, selectionMark, entry, entryText, checkbox, dragHandle,
                     expandTask, expandChildren, expandList, preview, previewTitle, previewComment,
                     addSubtask, remove, setEditing};
                 this._updateRowAppearance(index);
@@ -1275,10 +1281,15 @@
             const previousIndex = this._selectedIndex;
             this._rowWidgets[this._selectedIndex]?.row
                 .remove_style_class_name('selected');
+            const previousMark = this._rowWidgets[this._selectedIndex]?.selectionMark;
+            if (previousMark)
+                previousMark.opacity = 0;
             this._selectedIndex = index;
             this._updateDeleteVisibility(previousIndex);
             const row = this._rowWidgets[index]?.row;
             row?.add_style_class_name('selected');
+            if (this._rowWidgets[index]?.selectionMark)
+                this._rowWidgets[index].selectionMark.opacity = 255;
             this._updateDeleteVisibility(index);
             if (focus && row) {
                 row.grab_key_focus();
