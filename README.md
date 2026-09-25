@@ -1,33 +1,27 @@
-# Overview Todo — GNOME Shell 50
+# Gvido — Gnome VIbecoded toDO
 
-A light todo/notes card that floats over the top-right corner of GNOME Activities Overview without changing the window/workspace preview layout.
+Карточка со списком дел и заметками в правом верхнем углу обзора GNOME.
 
-## Features
+## Возможности
 
-- Visible in Activities Overview (`Super`)
-- Light theme
-- Vertical scrolling
-- Markdown-like `~/todo.md` storage
-- Headings (`#`, `##`, ...)
-- Nested tasks (2 spaces per level)
-- Add task / heading from the widget
-- `Tab` / `Shift+Tab` changes nesting level while editing
-- Checkbox completion
-- Delete rows with `×`
-- Reloads `~/todo.md` each time Overview opens
+- Показывается в обзоре GNOME (`Super`)
+- Хранение данных в `~/todo.md` в Markdown-подобном формате
+- Заголовки (`#`, `##` и так далее)
+- Вложенные задачи
+- Добавление задачи или заголовка прямо в виджете
 
-Use the drag handles to reorder rows.
+## Сочетания клавиш
 
-## Keyboard shortcuts
+- При открытии обзора фокус переходит на выбранную строку, а если ничего не выбрано — на первую.
+  Режим редактирования при этом не включается.
+- `↑` / `↓`: выбрать предыдущую или следующую строку; `Enter`: перейти к её редактированию.
+- `Alt+↑` / `Alt+↓`: переместить задачу или раздел.
+  Задачу можно перенести через заголовок в соседний раздел.
+- `Ctrl+Enter`: изменить отметку о выполнении задачи, в том числе при редактировании.
+- `Ctrl+Z` / `Ctrl+Shift+Z`: отменить или повторить изменение текста при редактировании задачи или заголовка.
+- `Delete`: удалить выбранную задачу. В редакторе клавиша, как обычно, удаляет текст.
 
-- Opening Overview focuses the selected row, or the first row if none is selected, without entering edit mode.
-- `↑` / `↓`: select the previous or next row; `Enter`: edit it.
-- `Alt+↑` / `Alt+↓`: move a task or section. A task can cross a heading into the adjacent section.
-- `Ctrl+Enter`: toggle completion of a task, including while editing.
-- `Ctrl+Z` / `Ctrl+Shift+Z`: undo or redo text changes while editing a task or heading.
-- `Delete`: remove the selected task. Inside the editor, it deletes text as usual.
-
-## File format
+## Формат файла
 
 ```md
 # Сейчас
@@ -39,25 +33,25 @@ Use the drag handles to reorder rows.
 - [ ] Ещё задача
 ```
 
-For headings, `Tab` / `Shift+Tab` changes the number of `#`. For tasks it changes indentation by two spaces.
+Для заголовков `Tab` и `Shift+Tab` меняют количество символов `#`, для задач — отступ на два пробела.
 
-## Install from the unpacked directory
+## Установка из распакованного каталога
 
 ```bash
 ./install.sh
 ```
 
-The installer validates the UUID, copies the extension into the active XDG data directory, and adds it to `org.gnome.shell enabled-extensions`.
-It does not remove `runtime.js`, `config.json`, or `theme.css` from an existing installed directory, so hot-reload state survives an update.
-On Wayland a newly created extension directory is normally discovered only when the Shell starts, so log out and back in after the first install:
+Установщик проверяет UUID, копирует расширение в активный каталог данных XDG и добавляет его в `org.gnome.shell enabled-extensions`.
+При обновлении он сохраняет `runtime.js`, `config.json` и `theme.css` в уже существующем каталоге расширения, поэтому состояние горячей перезагрузки не теряется.
+В сеансе Wayland оболочка обычно обнаруживает новый каталог расширения только при запуске. После первой установки выйдите из сеанса и войдите снова, затем проверьте расширение:
 
 ```bash
 gnome-extensions info overview-todo@local
 ```
 
-It should report the extension as enabled; no second `gnome-extensions enable` command is needed.
+Команда должна показать, что расширение включено; повторно выполнять `gnome-extensions enable` не нужно.
 
-## Install from ZIP
+## Установка из ZIP-архива
 
 ```bash
 gnome-extensions install --force overview-todo@local.shell-extension.zip
