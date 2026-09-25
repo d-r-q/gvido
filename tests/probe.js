@@ -342,6 +342,25 @@ export async function run() {
         runtime._rowWidgets[2].entryText.has_key_focus())
         throw new Error('Alt+Up did not move selected item without editing');
     console.log('PROBE PASS: Alt+Up/Down reorders in edit and selection modes');
+    const handle = runtime._rowWidgets[2].dragHandle;
+    if (handle.accessible_name !== 'Переместить выше или ниже стрелками вверх и вниз')
+        throw new Error('Drag handle does not describe keyboard reordering');
+    handle.grab_key_focus();
+    runtime._handleDragHandleKey(2, {
+        get_key_symbol: () => Clutter.KEY_Down,
+    });
+    await delay(150);
+    if (runtime._items[3] !== movedItem ||
+        !runtime._rowWidgets[3].dragHandle.has_key_focus())
+        throw new Error('Down arrow on drag handle did not move item and focus');
+    runtime._handleDragHandleKey(3, {
+        get_key_symbol: () => Clutter.KEY_Up,
+    });
+    await delay(150);
+    if (runtime._items[2] !== movedItem ||
+        !runtime._rowWidgets[2].dragHandle.has_key_focus())
+        throw new Error('Up arrow on drag handle did not move item and focus');
+    console.log('PROBE PASS: focused drag handle reorders with arrows');
     const heading = runtime._items[0];
     const section = runtime._items.slice(0, runtime._blockRange(0).end);
     runtime._moveItem(0, 1);

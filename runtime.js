@@ -591,13 +591,16 @@
 
                 const dragHandle = new St.Button({
                     child: new St.Icon({icon_name: 'list-drag-handle-symbolic', icon_size: 12}),
-                    accessible_name: 'Переместить',
+                    accessible_name: 'Переместить выше или ниже стрелками вверх и вниз',
                     can_focus: true,
                     reactive: true,
                     y_align: Clutter.ActorAlign.START,
                     style_class: 'overview-todo-drag-handle',
                 });
                 dragHandle.connect('key-focus-in', () => this._selectItem(index));
+                dragHandle.connect('key-press-event', (_actor, event) =>
+                    this._handleDragHandleKey(index, event));
+                this._bindActionTooltip(dragHandle);
                 // DnD is deliberately optional at row-construction time: if a
                 // future Shell changes this low-level event API, the todo widget
                 // must still render and remain usable instead of disappearing.
@@ -1494,7 +1497,15 @@
             return Clutter.EVENT_PROPAGATE;
         }
 
-        _moveItem(index, direction, editingState = null) {
+        _handleDragHandleKey(index, event) {
+            const symbol = event.get_key_symbol();
+            if (symbol !== Clutter.KEY_Up && symbol !== Clutter.KEY_Down)
+                return Clutter.EVENT_PROPAGATE;
+            this._moveItem(index, symbol === Clutter.KEY_Up ? -1 : 1, null, true);
+            return Clutter.EVENT_STOP;
+        }
+
+        _moveItem(index, direction, editingState = null, focusHandle = false) {
             const item = this._items[index];
             if (!item)
                 return;
@@ -1546,7 +1557,8 @@
             this._selectedIndex = newIndex;
             this._scheduleSave();
             this._queueRender(editingState ? newIndex : -1, false,
-                editingState ? -1 : newIndex, editingState);
+                editingState || focusHandle ? -1 : newIndex, editingState,
+                focusHandle ? newIndex : -1);
         }
 
         _entryClass(item) {
@@ -1638,7 +1650,7 @@
         }
 
         _queueRender(focusIndex = -1, selectAll = false, focusRowIndex = -1,
-            editingState = null) {
+            editingState = null, focusHandleIndex = -1) {
             if (this._renderSourceId)
                 GLib.Source.remove(this._renderSourceId);
 
@@ -1666,6 +1678,9 @@
                         entryText.set_selection(-1, -1);
                         entryText.set_cursor_position(-1);
                     }
+                } else if (focusHandleIndex >= 0) {
+                    this._selectItem(focusHandleIndex);
+                    this._rowWidgets[focusHandleIndex].dragHandle.grab_key_focus();
                 } else if (focusRowIndex >= 0) {
                     this._selectItem(focusRowIndex, true);
                 } else {
