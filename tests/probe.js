@@ -161,6 +161,10 @@ export async function run() {
     await delay(300);
     if (runtime._card.height !== 500 || !runtime._undoBar.visible)
         throw new Error('Undo notification changed the card height or did not appear');
+    const [cardX] = runtime._card.get_position();
+    const [toastX] = runtime._undoBar.get_position();
+    if (Math.abs(toastX + runtime._undoBar.width / 2 - cardX - runtime._card.width / 2) > 1)
+        throw new Error('Undo notification is not horizontally centered');
     await screenshot('undo', runtime._card);
     if (runtime._items[4].type !== 'heading' ||
         runtime._rowWidgets[4].entryText.has_key_focus() ||

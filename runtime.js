@@ -499,7 +499,7 @@
             const undoWidth = Math.min(width - 36, 260);
             this._undoBar?.set_size(undoWidth, 40);
             this._undoBar?.set_position(
-                monitor.x + monitor.width - margin - undoWidth - 18,
+                monitor.x + monitor.width - margin - (width + undoWidth) / 2,
                 monitor.y + panelHeight + panelGap + height - 54);
         }
 
