@@ -179,6 +179,30 @@ export async function run() {
     runtime._rowWidgets[4].expandTask.emit('clicked', 1);
     await delay(1000);
     measure('expanded');
+    runtime._selectItem(4);
+    const expandedRow = runtime._rowWidgets[4];
+    const centerY = actor => actor.get_transformed_position()[1] +
+        actor.get_transformed_size()[1] / 2;
+    if (Math.abs(centerY(expandedRow.selectionMark) - centerY(expandedRow.dragHandle)) > 1)
+        throw new Error('Selection mark is not aligned with controls on a tall row');
+    const headingPlus = runtime._rowWidgets[0].row.get_children().find(actor =>
+        actor.has_style_class_name('overview-todo-add-to-heading'));
+    const taskPlus = expandedRow.addSubtask;
+    if (!(headingPlus.child instanceof St.Icon) ||
+        Math.abs(headingPlus.get_transformed_position()[0] -
+            taskPlus.get_transformed_position()[0]) > 1 ||
+        Math.abs(runtime._rowWidgets[0].remove.get_transformed_position()[0] -
+            expandedRow.remove.get_transformed_position()[0]) > 1 ||
+        Math.abs(centerY(taskPlus) - centerY(expandedRow.remove)) > 1)
+        throw new Error('Add and delete buttons do not keep their action columns');
+    const headingPlusWidth = headingPlus.width;
+    runtime._showActionTooltip(headingPlus);
+    if (runtime._actionTooltip.text !== 'Добавить задачу в список' ||
+        headingPlus.width !== headingPlusWidth)
+        throw new Error('Heading add hint displaced its button');
+    runtime._hideActionTooltip();
+    await screenshot('aligned-actions', runtime._card);
+    console.log('PROBE PASS: selection mark and action columns align on multi-line rows');
     const text = runtime._rowWidgets[4].entryText;
     if (text.has_key_focus() || runtime._rowWidgets[4].entry.visible || !runtime._rowWidgets[4].preview.visible)
         throw new Error('Disclosure entered edit mode');
@@ -649,6 +673,9 @@ export async function run() {
     runtime._renderItems();
     if (runtime._rowWidgets[7].expandList)
         throw new Error('Empty list unexpectedly has a disclosure button');
+    if (Math.abs(runtime._rowWidgets[0].entry.get_transformed_position()[0] -
+        runtime._rowWidgets[7].entry.get_transformed_position()[0]) > 1)
+        throw new Error('Empty heading moved its title into the disclosure column');
     runtime._rowWidgets[1].expandChildren.emit('clicked', 1);
     runtime._rowWidgets[3].expandList.emit('clicked', 1);
     runtime._rowWidgets[0].expandList.emit('clicked', 1);
@@ -684,6 +711,9 @@ export async function run() {
         runtime._rowWidgets[4].addSubtask ||
         runtime._rowWidgets[1].row.visible)
         throw new Error('Add-subtask availability or initial fold state is wrong');
+    if (Math.abs(runtime._rowWidgets[0].expandTask.get_parent().get_transformed_position()[0] -
+        runtime._rowWidgets[4].expandTask.get_parent().get_transformed_position()[0]) > 1)
+        throw new Error('Maximum-depth task moved the comment action column');
     const sibling = runtime._items[3];
     runtime._rowWidgets[0].addSubtask.emit('clicked', 1);
     await delay(150);

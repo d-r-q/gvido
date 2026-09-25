@@ -90,6 +90,7 @@
 .overview-todo-selection-mark {
   width: 3px;
   height: 22px;
+  margin-top: 6px;
   background-color: #3584e4;
   border-radius: 2px;
 }
@@ -189,7 +190,8 @@
   transition-duration: 120ms;
 }
 .overview-todo-children-slot,
-.overview-todo-comment-slot {
+.overview-todo-comment-slot,
+.overview-todo-add-subtask-slot {
   width: 28px;
   height: 32px;
 }
@@ -197,8 +199,6 @@
   width: 24px;
   color: #d3d5db;
 }
-.overview-todo-heading-action-content { spacing: 5px; }
-.overview-todo-heading-action-hint { font-size: 0.8em; }
 .overview-todo-expand:hover,
 .overview-todo-add-to-heading:hover,
 .overview-todo-drag-handle:hover {

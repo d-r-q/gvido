@@ -634,7 +634,7 @@
                 if (index === this._selectedIndex)
                     row.add_style_class_name('selected');
                 const selectionMark = new St.Widget({
-                    y_align: Clutter.ActorAlign.CENTER,
+                    y_align: Clutter.ActorAlign.START,
                     opacity: index === this._selectedIndex ? 255 : 0,
                     style_class: 'overview-todo-selection-mark',
                 });
@@ -714,6 +714,12 @@
                         this._positionCard();
                     });
                     row.add_child(expandList);
+                }
+                if (item.type === 'heading' && !expandList) {
+                    row.add_child(new St.Bin({
+                        y_align: Clutter.ActorAlign.START,
+                        style_class: 'overview-todo-children-slot',
+                    }));
                 }
 
                 let expandChildren = null;
@@ -1032,29 +1038,24 @@
                     addSubtask.connect('clicked', () => this._addSubtask(index));
                     row.add_child(addSubtask);
                 }
+                if (item.type === 'task' && !addSubtask) {
+                    row.add_child(new St.Bin({
+                        y_align: Clutter.ActorAlign.START,
+                        style_class: 'overview-todo-add-subtask-slot',
+                    }));
+                }
 
                 if (item.type === 'heading') {
-                    const hint = new St.Label({
-                        text: 'Добавить задачу',
-                        visible: false,
-                        y_align: Clutter.ActorAlign.CENTER,
-                        style_class: 'overview-todo-heading-action-hint',
-                    });
-                    const addContent = new St.BoxLayout({style_class: 'overview-todo-heading-action-content'});
-                    addContent.add_child(new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
-                        x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER}));
-                    addContent.add_child(hint);
                     const addTaskToHeading = new St.Button({
-                        child: addContent,
+                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
+                            x_align: Clutter.ActorAlign.CENTER,
+                            y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: 'Добавить задачу в список',
                         can_focus: true,
-                        track_hover: true,
                         y_align: Clutter.ActorAlign.START,
                         style_class: 'overview-todo-add-to-heading',
                     });
-                    addTaskToHeading.connect('notify::hover', () => {
-                        hint.visible = addTaskToHeading.hover;
-                    });
+                    this._bindActionTooltip(addTaskToHeading);
                     addTaskToHeading.connect('key-focus-in', () => this._selectItem(index));
                     addTaskToHeading.connect('clicked', () => this._addTaskToHeading(index));
                     row.add_child(addTaskToHeading);
