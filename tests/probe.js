@@ -78,6 +78,25 @@ export async function run() {
         checkboxRow.entryText.has_key_focus())
         throw new Error('Checkbox click rebuilt the row or entered edit mode');
     console.log('PROBE PASS: checkbox click does not enter edit mode');
+    const parent = runtime._rowWidgets[1];
+    if (!parent.expandChildren || runtime._rowWidgets[4].expandChildren)
+        throw new Error('Subtask toggle is not limited to parent tasks');
+    parent.expandChildren.emit('clicked', 1);
+    if (runtime._rowWidgets[2].row.visible || runtime._rowWidgets[3].row.visible ||
+        !runtime._rowWidgets[4].row.visible || runtime._items.length !== 8 ||
+        runtime._rowWidgets[1].entryText.has_key_focus())
+        throw new Error('Collapsing a task did not hide only its descendants');
+    runtime._selectItem(1, true);
+    runtime._handleRowKey(1, {
+        get_key_symbol: () => Clutter.KEY_Down,
+        get_state: () => 0,
+    });
+    if (runtime._selectedIndex !== 4)
+        throw new Error('Keyboard navigation entered hidden subtasks');
+    parent.expandChildren.emit('clicked', 1);
+    if (!runtime._rowWidgets[2].row.visible || !runtime._rowWidgets[3].row.visible)
+        throw new Error('Expanding a task did not restore its subtasks');
+    console.log('PROBE PASS: task disclosure hides descendants and skips them in navigation');
     const measure = label => {
         const w = runtime._rowWidgets[4];
         const check = w.checkbox;
@@ -370,6 +389,29 @@ export async function run() {
     if (runtime._items.length !== 4 || runtime._items[1] !== secondHeading)
         throw new Error('Delete removed a section heading');
     console.log('PROBE PASS: Delete removes selected task, not editor text');
+    runtime._items = [
+        {type: 'task', level: 0, text: 'Родитель\nКомментарий', done: false},
+        {type: 'task', level: 1, text: 'Дочерняя', done: false},
+        {type: 'task', level: 2, text: 'Внучатая', done: false},
+        {type: 'task', level: 0, text: 'Соседняя', done: false},
+    ];
+    runtime._renderItems();
+    runtime._rowWidgets[1].expandChildren.emit('clicked', 1);
+    runtime._rowWidgets[0].expandChildren.emit('clicked', 1);
+    runtime._rowWidgets[0].expandTask.emit('clicked', 1);
+    if (runtime._rowWidgets[1].row.visible || runtime._rowWidgets[2].row.visible ||
+        !runtime._rowWidgets[3].row.visible || !runtime._items[0].expanded)
+        throw new Error('Subtask folding interfered with the comment or sibling task');
+    runtime._rowWidgets[0].expandChildren.emit('clicked', 1);
+    if (!runtime._rowWidgets[1].row.visible || runtime._rowWidgets[2].row.visible)
+        throw new Error('Nested task fold state was not preserved');
+    runtime._renderItems();
+    if (!runtime._rowWidgets[1].row.visible || runtime._rowWidgets[2].row.visible)
+        throw new Error('Re-render lost the nested fold state');
+    runtime._rowWidgets[1].expandChildren.emit('clicked', 1);
+    if (!runtime._rowWidgets[2].row.visible)
+        throw new Error('Nested subtasks did not expand');
+    console.log('PROBE PASS: nested folds preserve child state and comment disclosure');
     runtime.disable();
     Main.overview.hide();
     await delay(900);

@@ -847,6 +847,33 @@
                     row.add_child(expandTask);
                 }
 
+                let expandChildren = null;
+                if (item.type === 'task' && this._blockRange(index).end > index + 1) {
+                    expandChildren = new St.Button({
+                        child: new St.Icon({
+                            icon_name: item.childrenCollapsed ? 'pan-end-symbolic' : 'pan-down-symbolic',
+                            icon_size: 12,
+                        }),
+                        accessible_name: item.childrenCollapsed
+                            ? 'Показать подзадачи' : 'Свернуть подзадачи',
+                        can_focus: true,
+                        y_align: Clutter.ActorAlign.START,
+                        style_class: 'overview-todo-expand',
+                    });
+                    expandChildren.connect('key-focus-in', () => this._selectItem(index));
+                    expandChildren.connect('clicked', () => {
+                        this._selectItem(index);
+                        item.childrenCollapsed = !item.childrenCollapsed;
+                        expandChildren.child.icon_name = item.childrenCollapsed
+                            ? 'pan-end-symbolic' : 'pan-down-symbolic';
+                        expandChildren.accessible_name = item.childrenCollapsed
+                            ? 'Показать подзадачи' : 'Свернуть подзадачи';
+                        this._updateChildrenVisibility();
+                        this._positionCard();
+                    });
+                    row.add_child(expandChildren);
+                }
+
                 if (item.type === 'heading') {
                     const hint = new St.Label({
                         text: 'Добавить задачу',
@@ -897,11 +924,30 @@
 
                 this._list.add_child(row);
                 this._rowWidgets[index] = {row, entry, entryText, checkbox, dragHandle,
-                    expandTask, preview, previewTitle, previewComment, remove, setEditing};
+                    expandTask, expandChildren, preview, previewTitle, previewComment, remove, setEditing};
                 this._updateRowAppearance(index);
                 this._updateDeleteVisibility(index);
             });
+            this._updateChildrenVisibility();
             this._positionCard();
+        }
+
+        _updateChildrenVisibility() {
+            const collapsedLevels = [];
+            this._items.forEach((item, index) => {
+                if (item.type !== 'task')
+                    collapsedLevels.length = 0;
+                else {
+                    while (collapsedLevels.length && item.level <= collapsedLevels.at(-1))
+                        collapsedLevels.pop();
+                }
+                const row = this._rowWidgets[index]?.row;
+                if (row)
+                    row.visible = collapsedLevels.length === 0;
+                if (item.type === 'task' && item.childrenCollapsed &&
+                    this._blockRange(index).end > index + 1)
+                    collapsedLevels.push(item.level);
+            });
         }
 
         _blockRange(index) {
@@ -1010,7 +1056,7 @@
 
             for (let i = 0; i < this._rowWidgets.length; i++) {
                 const row = this._rowWidgets[i]?.row;
-                if (!row)
+                if (!row?.visible)
                     continue;
 
                 const [, rowY] = row.get_transformed_position();
@@ -1043,12 +1089,20 @@
                 return;
 
             if (insertIndex < this._rowWidgets.length) {
-                this._rowWidgets[insertIndex]?.row.add_style_class_name('overview-todo-drop-before');
-                this._dropIndicatorIndex = insertIndex;
+                const target = this._rowWidgets[insertIndex]?.row;
+                if (target?.visible) {
+                    target.add_style_class_name('overview-todo-drop-before');
+                    this._dropIndicatorIndex = insertIndex;
+                }
             } else if (this._rowWidgets.length) {
-                const last = this._rowWidgets.length - 1;
-                this._rowWidgets[last]?.row.add_style_class_name('overview-todo-drop-after');
-                this._dropIndicatorIndex = last;
+                for (let last = this._rowWidgets.length - 1; last >= 0; last--) {
+                    const row = this._rowWidgets[last]?.row;
+                    if (row?.visible) {
+                        row.add_style_class_name('overview-todo-drop-after');
+                        this._dropIndicatorIndex = last;
+                        break;
+                    }
+                }
             }
         }
 
@@ -1321,8 +1375,13 @@
                 return Clutter.EVENT_STOP;
             }
             if (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_Down) {
-                this._selectItem(clamp(index + (symbol === Clutter.KEY_Up ? -1 : 1),
-                    0, this._items.length - 1), true);
+                const direction = symbol === Clutter.KEY_Up ? -1 : 1;
+                let next = index + direction;
+                while (next >= 0 && next < this._items.length &&
+                    !this._rowWidgets[next]?.row.visible)
+                    next += direction;
+                if (next >= 0 && next < this._items.length)
+                    this._selectItem(next, true);
                 return Clutter.EVENT_STOP;
             }
             if (isEnter) {
