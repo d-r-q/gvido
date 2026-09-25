@@ -397,7 +397,7 @@
             const addHeading = new St.Button({
                 label: cfg.ui.addHeadingLabel,
                 can_focus: true,
-                style_class: 'overview-todo-action',
+                style_class: 'overview-todo-action overview-todo-action-secondary',
             });
             addHeading.connect('clicked', () => this._addItem('heading'));
 

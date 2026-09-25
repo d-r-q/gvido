@@ -57,6 +57,16 @@
 .overview-todo-action-primary:active { background-color: #1c71d8; }
 .overview-todo-action-primary:focus { border-color: #1a5fb4; }
 
+.overview-todo-action-secondary {
+  color: #5e626a;
+  background-color: transparent;
+  border-color: transparent;
+  font-weight: 400;
+}
+.overview-todo-action-secondary:hover { background-color: #e9e9ee; }
+.overview-todo-action-secondary:active { background-color: #dedfe5; }
+.overview-todo-action-secondary:focus { border-color: #3584e4; }
+
 .overview-todo-scroll {
   background-color: #ffffff;
   border: 1px solid #e5e5e9;
