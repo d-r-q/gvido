@@ -922,11 +922,7 @@
 
                     const backwards = symbol === Clutter.KEY_ISO_Left_Tab ||
                         Boolean(state & Clutter.ModifierType.SHIFT_MASK);
-                    const maxLevel = Math.max(0, Number(cfg.behavior.maxLevel) || 5);
-                    item.level = clamp(item.level + (backwards ? -1 : 1), 0, maxLevel);
-                    this._updateRowAppearance(index);
-                    this._positionCard();
-                    this._scheduleSave();
+                    this._changeItemLevel(index, backwards ? -1 : 1);
                     return Clutter.EVENT_STOP;
                 });
 
@@ -1574,6 +1570,12 @@
             const symbol = event.get_key_symbol();
             const state = event.get_state();
             const isEnter = symbol === Clutter.KEY_Return || symbol === Clutter.KEY_KP_Enter;
+            if (symbol === Clutter.KEY_Tab || symbol === Clutter.KEY_ISO_Left_Tab) {
+                const backwards = symbol === Clutter.KEY_ISO_Left_Tab ||
+                    Boolean(state & Clutter.ModifierType.SHIFT_MASK);
+                this._changeItemLevel(index, backwards ? -1 : 1);
+                return Clutter.EVENT_STOP;
+            }
             if ((state & Clutter.ModifierType.CONTROL_MASK) && isEnter) {
                 this._toggleTask(index);
                 return Clutter.EVENT_STOP;
@@ -1617,6 +1619,15 @@
                 return Clutter.EVENT_STOP;
             }
             return Clutter.EVENT_PROPAGATE;
+        }
+
+        _changeItemLevel(index, direction) {
+            const item = this._items[index];
+            const maxLevel = Math.max(0, Number(cfg.behavior.maxLevel) || 5);
+            item.level = clamp(item.level + direction, 0, maxLevel);
+            this._updateRowAppearance(index);
+            this._positionCard();
+            this._scheduleSave();
         }
 
         _handleDragHandleKey(index, event) {

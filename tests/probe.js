@@ -704,6 +704,59 @@ export async function run() {
         throw new Error('Shift+KP_Enter did not add a top-level sibling after the branch');
     console.log('PROBE PASS: Shift+Enter adds a same-level task after its branch in navigation mode');
     runtime._items = [
+        {type: 'heading', level: 0, text: 'Раздел'},
+        {type: 'task', level: 0, text: 'Задача', done: false},
+    ];
+    runtime._renderItems();
+    const tabKey = {
+        get_key_symbol: () => Clutter.KEY_Tab,
+        get_state: () => 0,
+    };
+    const shiftTabKey = {
+        get_key_symbol: () => Clutter.KEY_ISO_Left_Tab,
+        get_state: () => Clutter.ModifierType.SHIFT_MASK,
+    };
+    runtime._selectItem(1, true);
+    if (runtime._handleRowKey(1, tabKey) !== Clutter.EVENT_STOP ||
+        runtime._items[1].level !== 1 ||
+        !runtime._rowWidgets[1].row.has_key_focus() ||
+        runtime._rowWidgets[1].entryText.has_key_focus())
+        throw new Error('Tab did not indent the selected task without editing it');
+    runtime._handleRowKey(1, shiftTabKey);
+    runtime._handleRowKey(1, shiftTabKey);
+    if (runtime._items[1].level !== 0 ||
+        !runtime._rowWidgets[1].row.has_key_focus())
+        throw new Error('Shift+Tab did not outdent the task with a zero-level bound');
+    runtime._selectItem(0, true);
+    runtime._handleRowKey(0, tabKey);
+    if (runtime._items[0].level !== 1 ||
+        !runtime._rowWidgets[0].row.has_key_focus())
+        throw new Error('Tab did not indent the selected heading');
+    runtime._handleRowKey(0, {
+        get_key_symbol: () => Clutter.KEY_Tab,
+        get_state: () => Clutter.ModifierType.SHIFT_MASK,
+    });
+    if (runtime._items[0].level !== 0)
+        throw new Error('Shift+Tab did not outdent the selected heading');
+    runtime._selectItem(1, true);
+    const navigationKeyboard = Clutter.get_default_backend().get_default_seat()
+        .create_virtual_device(Clutter.VirtualDeviceType.KEYBOARD);
+    navigationKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Tab, Clutter.KeyState.PRESSED);
+    navigationKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Tab, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (runtime._items[1].level !== 1 ||
+        !runtime._rowWidgets[1].row.has_key_focus())
+        throw new Error('Real Tab event did not indent the selected task');
+    navigationKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
+    navigationKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Tab, Clutter.KeyState.PRESSED);
+    navigationKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Tab, Clutter.KeyState.RELEASED);
+    navigationKeyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (runtime._items[1].level !== 0 ||
+        !runtime._rowWidgets[1].row.has_key_focus())
+        throw new Error('Real Shift+Tab event did not outdent the selected task');
+    console.log('PROBE PASS: Tab and Shift+Tab change selected task and heading levels');
+    runtime._items = [
         {type: 'heading', level: 0, text: 'Сегодня'},
         {type: 'task', level: 0, text: 'Подготовить релиз\nСверить сценарии',
             done: false, expanded: true},
