@@ -46,7 +46,7 @@
 В сеансе Wayland оболочка обычно обнаруживает новый каталог расширения только при запуске. После первой установки выйдите из сеанса и войдите снова, затем проверьте расширение:
 
 ```bash
-gnome-extensions info overview-todo@local
+gnome-extensions info gvido@local
 ```
 
 Команда должна показать, что расширение включено; повторно выполнять `gnome-extensions enable` не нужно.
@@ -54,6 +54,6 @@ gnome-extensions info overview-todo@local
 ## Установка из ZIP-архива
 
 ```bash
-gnome-extensions install --force overview-todo@local.shell-extension.zip
-gnome-extensions enable overview-todo@local
+gnome-extensions install --force gvido@local.shell-extension.zip
+gnome-extensions enable gvido@local
 ```

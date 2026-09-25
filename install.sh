@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-UUID=overview-todo@local
+UUID=gvido@local
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 EXTENSIONS_DIR="${OVERVIEW_TODO_EXTENSIONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions}"
 TARGET="$EXTENSIONS_DIR/$UUID"

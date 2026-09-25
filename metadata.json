@@ -1,6 +1,6 @@
 {
-  "uuid": "overview-todo@local",
-  "name": "Overview Todo",
+  "uuid": "gvido@local",
+  "name": "gvido",
   "description": "Editable todo.md widget over GNOME Activities Overview with live-reloadable runtime, config and theme.",
   "shell-version": [
     "50"
