@@ -177,6 +177,8 @@
             this._dropIndicatorIndex = -1;
             this._undo = null;
             this._undoSourceId = 0;
+            this._textHistory = new WeakMap();
+            this._restoringText = false;
         }
 
         enable() {
@@ -193,6 +195,7 @@
             this._drag = null;
             this._dropIndicatorIndex = -1;
             this._undo = null;
+            this._textHistory = new WeakMap();
 
             this._ensureFile();
             this._loadItems();
@@ -658,10 +661,16 @@
                 };
                 entryText.connect('key-focus-in', () => {
                     this._selectItem(index);
+                    const history = this._textHistory.get(item);
+                    if (history)
+                        history.lastChange = null;
                     setEditing(true);
                     entry.add_style_pseudo_class('focus');
                 });
                 entryText.connect('key-focus-out', () => {
+                    const history = this._textHistory.get(item);
+                    if (history)
+                        history.lastChange = null;
                     entry.remove_style_pseudo_class('focus');
                     const switcher = Main.panel.statusArea.keyboard
                         ?._inputSourceManager?._switcherPopup;
@@ -697,8 +706,9 @@
                 });
 
                 entryText.connect('text-changed', () => {
-                    if (updatingEntry)
+                    if (updatingEntry || this._restoringText)
                         return;
+                    const previousText = item.text;
                     if (isCollapsedTask) {
                         const lines = item.text.split(/\r?\n/);
                         lines[0] = entryText.get_text();
@@ -706,6 +716,9 @@
                     } else {
                         item.text = entryText.get_text();
                     }
+                    if (item.text !== previousText)
+                        this._recordTextChange(item, previousText, item.text,
+                            entryText.get_cursor_position(), entryText.get_selection_bound());
                     // Update controls in place as the comment is typed. A
                     // rebuild on the first newline loses the caret and misses
                     // the later transition from an empty line to a comment.
@@ -725,10 +738,12 @@
                     const shiftPressed = Boolean(state & Clutter.ModifierType.SHIFT_MASK);
                     if (isEnter && shiftPressed && item.type === 'task') {
                         if (isCollapsedTask) {
+                            const previousText = item.text;
                             const cursor = entryText.get_cursor_position();
                             const lines = item.text.split(/\r?\n/);
                             lines[0] = `${lines[0].slice(0, cursor)}\n${lines[0].slice(cursor)}`;
                             item.text = lines.join('\n');
+                            this._recordTextChange(item, previousText, item.text, cursor, cursor);
                             item.expanded = true;
                             this._scheduleSave();
                             this._queueRender(index);
@@ -1186,9 +1201,86 @@
             this._queueRender(-1, false, insertIndex);
         }
 
+        _recordTextChange(item, previousText, nextText, cursor, bound) {
+            let history = this._textHistory.get(item);
+            if (!history) {
+                history = {undo: [], redo: [], lastChange: null};
+                this._textHistory.set(item, history);
+            }
+
+            let start = 0;
+            while (start < previousText.length && start < nextText.length &&
+                previousText[start] === nextText[start])
+                start++;
+            let oldEnd = previousText.length;
+            let newEnd = nextText.length;
+            while (oldEnd > start && newEnd > start &&
+                previousText[oldEnd - 1] === nextText[newEnd - 1]) {
+                oldEnd--;
+                newEnd--;
+            }
+            const removed = oldEnd - start;
+            const added = newEnd - start;
+            const kind = removed === 0 && added === 1 ? 'insert'
+                : removed === 1 && added === 0 ? 'delete' : null;
+            const now = GLib.get_monotonic_time();
+            const last = history.lastChange;
+            const consecutive = last && kind && last.kind === kind &&
+                now - last.time < 750000 &&
+                (kind === 'insert' ? start === last.position + 1
+                    : start === last.position || start + 1 === last.position);
+            if (!consecutive) {
+                history.undo.push({text: previousText,
+                    cursor: cursor < 0 ? start : Math.min(cursor, previousText.length),
+                    bound: bound < 0 ? -1 : Math.min(bound, previousText.length)});
+                if (history.undo.length > 100)
+                    history.undo.shift();
+            }
+            history.redo = [];
+            history.lastChange = kind ? {kind, position: start, time: now} : null;
+        }
+
+        _restoreText(index, entryText, redo = false) {
+            const item = this._items[index];
+            const history = this._textHistory.get(item);
+            const from = redo ? history?.redo : history?.undo;
+            if (!from?.length)
+                return;
+
+            const to = redo ? history.undo : history.redo;
+            to.push({text: item.text, cursor: entryText.get_cursor_position(),
+                bound: entryText.get_selection_bound()});
+            const snapshot = from.pop();
+            const collapsed = item.type === 'task' && entryText.get_text() !== item.text;
+            item.text = snapshot.text;
+            if (item.type === 'task' && !collapsed)
+                item.expanded = item.text.includes('\n');
+            this._restoringText = true;
+            try {
+                entryText.set_text(collapsed ? item.text.split(/\r?\n/, 1)[0] : item.text);
+            } finally {
+                this._restoringText = false;
+            }
+            if (snapshot.bound >= 0 && snapshot.bound !== snapshot.cursor)
+                entryText.set_selection(snapshot.bound, snapshot.cursor);
+            else
+                entryText.set_cursor_position(snapshot.cursor);
+            history.lastChange = null;
+            this._updateRowAppearance(index);
+            this._positionCard();
+            this._scheduleSave();
+        }
+
         _handleEditorShortcut(index, event, entryText) {
             const symbol = event.get_key_symbol();
             const state = event.get_state();
+            if ((state & Clutter.ModifierType.CONTROL_MASK) &&
+                (symbol === Clutter.KEY_z || symbol === Clutter.KEY_Z ||
+                    symbol === Clutter.KEY_Cyrillic_ya || symbol === Clutter.KEY_Cyrillic_YA)) {
+                this._restoreText(index, entryText,
+                    Boolean(state & Clutter.ModifierType.SHIFT_MASK));
+                return Clutter.EVENT_STOP;
+            }
             const isEnter = symbol === Clutter.KEY_Return || symbol === Clutter.KEY_KP_Enter;
             if ((state & Clutter.ModifierType.CONTROL_MASK) && isEnter) {
                 this._toggleTask(index);

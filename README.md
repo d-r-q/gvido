@@ -24,6 +24,7 @@ Use the drag handles to reorder rows.
 - `↑` / `↓`: select the previous or next row; `Enter`: edit it.
 - `Alt+↑` / `Alt+↓`: move a task or section. A task can cross a heading into the adjacent section.
 - `Ctrl+Enter`: toggle completion of a task, including while editing.
+- `Ctrl+Z` / `Ctrl+Shift+Z`: undo or redo text changes while editing a task or heading.
 - `Delete`: remove the selected task. Inside the editor, it deletes text as usual.
 
 ## File format

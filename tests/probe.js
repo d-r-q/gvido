@@ -144,6 +144,48 @@ export async function run() {
     if (runtime._rowWidgets[index].expandTask.visible)
         throw new Error('Expand button remains after deleting the comment');
     console.log('PROBE PASS: new comment toggle, stable editor/caret, collapse/expand, comment deletion');
+
+    const undoKey = {
+        get_key_symbol: () => Clutter.KEY_z,
+        get_state: () => Clutter.ModifierType.CONTROL_MASK,
+    };
+    const redoKey = {
+        get_key_symbol: () => Clutter.KEY_Z,
+        get_state: () => Clutter.ModifierType.CONTROL_MASK | Clutter.ModifierType.SHIFT_MASK,
+    };
+    const headingEditor = runtime._rowWidgets[0].entryText;
+    headingEditor.grab_key_focus();
+    headingEditor.set_text('СегодняA');
+    headingEditor.set_text('СегодняAB');
+    runtime._renderItems();
+    const rebuiltHeadingEditor = runtime._rowWidgets[0].entryText;
+    runtime._handleEditorShortcut(0, undoKey, rebuiltHeadingEditor);
+    if (runtime._items[0].text !== 'Сегодня' || rebuiltHeadingEditor.get_text() !== 'Сегодня')
+        throw new Error('Ctrl+Z did not undo a typing burst after editor rebuild');
+    runtime._handleEditorShortcut(0, redoKey, rebuiltHeadingEditor);
+    if (runtime._items[0].text !== 'СегодняAB')
+        throw new Error('Ctrl+Shift+Z did not redo the typing burst');
+    runtime._handleEditorShortcut(0, undoKey, rebuiltHeadingEditor);
+    rebuiltHeadingEditor.set_text('Сегодня!');
+    runtime._handleEditorShortcut(0, redoKey, rebuiltHeadingEditor);
+    if (runtime._items[0].text !== 'Сегодня!')
+        throw new Error('New typing did not clear the redo history');
+    runtime._handleEditorShortcut(0, undoKey, rebuiltHeadingEditor);
+    if (runtime._items[0].text !== 'Сегодня')
+        throw new Error('Ctrl+Z did not restore the heading after a new edit');
+
+    const commentTask = runtime._items[4];
+    const originalComment = commentTask.text;
+    runtime._rowWidgets[4].expandTask.emit('clicked', 1);
+    const collapsedEditor = runtime._rowWidgets[4].entryText;
+    collapsedEditor.set_text('Обсудить макет');
+    runtime._handleEditorShortcut(4, undoKey, collapsedEditor);
+    if (commentTask.text !== originalComment ||
+        collapsedEditor.get_text() !== originalComment.split('\n')[0])
+        throw new Error('Undo in a collapsed task lost its comment');
+    runtime._rowWidgets[4].expandTask.emit('clicked', 1);
+    console.log('PROBE PASS: Ctrl+Z/Ctrl+Shift+Z undo text per item and preserve comments');
+
     runtime._sizeOverride = {width: 500, height: 500};
     runtime._positionCard();
     if (runtime._card.width !== 500 || runtime._card.height !== 500 ||
@@ -354,6 +396,39 @@ export async function run() {
         focusRuntime._rowWidgets[1].entryText.has_key_focus())
         throw new Error('Overview reopening did not restore the selected row');
     console.log('PROBE PASS: Overview opening and reopening focus the selected row');
+    focusRuntime._rowWidgets[1].preview.emit('clicked', 1);
+    const focusedEditor = focusRuntime._rowWidgets[1].entryText;
+    focusedEditor.insert_text('!', -1);
+    const keyboard = Clutter.get_default_backend().get_default_seat()
+        .create_virtual_device(Clutter.VirtualDeviceType.KEYBOARD);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_z, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_z, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (focusRuntime._items[1].text !== 'Первое дело' ||
+        !focusedEditor.has_key_focus())
+        throw new Error(`Ctrl+Z key event escaped to Overview search: text=${focusRuntime._items[1].text}, focus=${global.stage.get_key_focus()}`);
+    const inputSources = new Gio.Settings({schema_id: 'org.gnome.desktop.input-sources'});
+    inputSources.set_value('sources', new GLib.Variant('a(ss)',
+        [['xkb', 'us'], ['xkb', 'ru']]));
+    await delay(300);
+    const russianSource = Main.panel.statusArea.keyboard._inputSourceManager._inputSources[1];
+    if (!russianSource)
+        throw new Error('Russian input source was not registered in the isolated Shell');
+    russianSource.activate(true);
+    await delay(300);
+    focusedEditor.grab_key_focus();
+    focusedEditor.set_text('Первое дело!');
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_ya, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_ya, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    if (focusRuntime._items[1].text !== 'Первое дело' ||
+        !focusedEditor.has_key_focus())
+        throw new Error(`Russian Ctrl+Z key event escaped to Overview search: text=${focusRuntime._items[1].text}, focus=${global.stage.get_key_focus()}`);
+    console.log('PROBE PASS: actual Ctrl+Z key event stays in the editor for English and Russian layouts');
     focusRuntime._addItem('task');
     await delay(300);
     if (focusRuntime._items[0].type !== 'task' ||
