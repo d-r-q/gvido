@@ -31,4 +31,10 @@ if ! rg -q 'PROBE COMPLETE' "$TEST_OUTPUT/shell.log"; then
     exit 1
 fi
 
+if rg -q 'st_widget_get_theme_node called.*overview-todo' "$TEST_OUTPUT/shell.log"; then
+    echo 'В журнале остались предупреждения об элементах виджета вне сцены:' >&2
+    rg -m 5 'st_widget_get_theme_node called.*overview-todo' "$TEST_OUTPUT/shell.log" >&2
+    exit 1
+fi
+
 rg 'PROBE PASS|PROBE COMPLETE' "$TEST_OUTPUT/shell.log"

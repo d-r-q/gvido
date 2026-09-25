@@ -205,7 +205,6 @@
             this._loadItems();
             this._buildUi();
             this._renderItems();
-            this._positionCard();
 
             // overviewGroup is visible only as part of Activities Overview.
             // Adding the card to it overlays workspace/window previews instead
@@ -213,6 +212,7 @@
             Main.layoutManager.overviewGroup.add_child(this._card);
             Main.layoutManager.overviewGroup.add_child(this._resizeHandle);
             Main.layoutManager.overviewGroup.add_child(this._undoBar);
+            this._positionCard();
 
             this._overviewShowingId = Main.overview.connect('showing', () => {
                 this._flushSave();
@@ -465,7 +465,7 @@
         }
 
         _positionCard() {
-            if (!this._card)
+            if (!this._card || this._card.get_stage() !== global.stage)
                 return;
 
             const monitor = Main.layoutManager.primaryMonitor;
