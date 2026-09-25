@@ -1064,9 +1064,6 @@
                 const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16,
                     x_align: Clutter.ActorAlign.CENTER,
                     y_align: Clutter.ActorAlign.CENTER});
-                // This symbolic glyph is drawn above its actor's visual center.
-                // Keep the button hit area aligned with the other actions.
-                removeIcon.set_translation(0, 3, 0);
                 const remove = new St.Button({
                     child: removeIcon,
                     accessible_name: 'Удалить',
@@ -1088,6 +1085,7 @@
                     addSubtask, remove, setEditing};
                 entry.connect('notify::height', () => this._updateRowHeight(index));
                 previewTitle?.connect('notify::height', () => this._updateRowHeight(index));
+                previewComment?.connect('notify::height', () => this._updateRowHeight(index));
                 this._updateRowAppearance(index);
                 this._updateDeleteVisibility(index);
             });
@@ -1812,7 +1810,7 @@
                 : 1;
             const content = widgets.preview?.visible ? widgets.preview : widgets.entry;
             const wrappedHeight = content.width > 0 && content.get_stage()
-                ? content.get_preferred_height(content.width)[1] : 0;
+                ? content.get_preferred_height(content.width)[0] : 0;
             const rowHeight = Math.max(38, lineCount * 24 + 14, wrappedHeight);
             const indentPx = Math.max(0, Number(cfg.behavior.indentPx) || 0);
             const style = `padding-left: ${item.level * indentPx}px; min-height: ${rowHeight}px;`;

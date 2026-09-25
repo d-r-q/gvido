@@ -90,7 +90,7 @@
 .overview-todo-selection-mark {
   width: 3px;
   height: 22px;
-  margin-top: 6px;
+  margin-top: 7px;
   background-color: #3584e4;
   border-radius: 2px;
 }
@@ -147,7 +147,7 @@
 .overview-todo-check-hit {
   width: 28px;
   height: 28px;
-  margin-top: 1px;
+  margin-top: 3px;
   margin-right: 0;
   padding: 0;
   background-color: transparent;
@@ -195,6 +195,8 @@
   width: 28px;
   height: 32px;
 }
+.overview-todo-children-slot,
+.overview-todo-comment-slot { margin-top: 2px; }
 .overview-todo-drag-handle {
   width: 24px;
   color: #d3d5db;

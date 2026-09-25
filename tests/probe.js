@@ -183,8 +183,20 @@ export async function run() {
     const expandedRow = runtime._rowWidgets[4];
     const centerY = actor => actor.get_transformed_position()[1] +
         actor.get_transformed_size()[1] / 2;
-    if (Math.abs(centerY(expandedRow.selectionMark) - centerY(expandedRow.dragHandle)) > 1)
-        throw new Error('Selection mark is not aligned with controls on a tall row');
+    const visibleTitleLines = expandedRow.previewTitle.clutter_text.get_layout().get_line_count();
+    const firstLineCenter = expandedRow.previewTitle.get_transformed_position()[1] +
+        expandedRow.previewTitle.height / visibleTitleLines / 2;
+    for (const actor of [expandedRow.selectionMark, expandedRow.dragHandle.child,
+        expandedRow.checkbox.child, expandedRow.expandTask.child,
+        expandedRow.addSubtask.child, expandedRow.remove.child]) {
+        if (Math.abs(centerY(actor) - firstLineCenter) > 1)
+            throw new Error('Row control is not aligned with the first title line');
+    }
+    const rowBottom = expandedRow.row.get_transformed_position()[1] + expandedRow.row.height;
+    const previewBottom = expandedRow.preview.get_transformed_position()[1] +
+        expandedRow.preview.height;
+    if (previewBottom > rowBottom + 1)
+        throw new Error('Expanded comment extends outside the highlighted row');
     const headingPlus = runtime._rowWidgets[0].row.get_children().find(actor =>
         actor.has_style_class_name('overview-todo-add-to-heading'));
     const taskPlus = expandedRow.addSubtask;
