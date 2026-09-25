@@ -1551,6 +1551,14 @@
                 return Clutter.EVENT_STOP;
             }
             if ((state & Clutter.ModifierType.CONTROL_MASK) &&
+                (symbol === Clutter.KEY_c || symbol === Clutter.KEY_C ||
+                    symbol === Clutter.KEY_Cyrillic_es || symbol === Clutter.KEY_Cyrillic_ES)) {
+                const selectedText = entryText.get_selection();
+                if (selectedText)
+                    St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, selectedText);
+                return Clutter.EVENT_STOP;
+            }
+            if ((state & Clutter.ModifierType.CONTROL_MASK) &&
                 (symbol === Clutter.KEY_z || symbol === Clutter.KEY_Z ||
                     symbol === Clutter.KEY_Cyrillic_ya || symbol === Clutter.KEY_Cyrillic_YA)) {
                 this._restoreText(index, entryText,

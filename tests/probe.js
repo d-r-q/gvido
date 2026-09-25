@@ -881,6 +881,20 @@ export async function run() {
         !focusedEditor.has_key_focus())
         throw new Error('Russian Ctrl+A did not select all editor text');
     console.log('PROBE PASS: Russian Ctrl+A selects all editor text');
+    focusedEditor.set_text('Копировать');
+    focusedEditor.set_selection(0, 4);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_es, Clutter.KeyState.PRESSED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Cyrillic_es, Clutter.KeyState.RELEASED);
+    keyboard.notify_keyval(Clutter.CURRENT_TIME, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
+    await delay(100);
+    const copiedText = await new Promise(resolve =>
+        St.Clipboard.get_default().get_text(St.ClipboardType.CLIPBOARD,
+            (_clipboard, text) => resolve(text)));
+    if (copiedText !== 'Копи' || focusedEditor.get_text() !== 'Копировать' ||
+        !focusedEditor.has_key_focus())
+        throw new Error(`Russian Ctrl+C did not copy the selection: ${copiedText}`);
+    console.log('PROBE PASS: Russian Ctrl+C copies selected editor text');
     focusRuntime._addItem('task');
     await delay(300);
     if (focusRuntime._items[0].type !== 'task' ||
