@@ -669,7 +669,34 @@ export async function run() {
         !runtime._rowWidgets[3].entryText.has_key_focus())
         throw new Error('Adding a subtask did not append to the parent branch and focus it');
     console.log('PROBE PASS: add-subtask action follows comment, opens parent, and focuses new child');
+    runtime._items = [
+        {type: 'heading', level: 0, text: 'Сегодня'},
+        {type: 'task', level: 0, text: 'Подготовить релиз\nСверить сценарии',
+            done: false, expanded: true},
+        {type: 'task', level: 1, text: 'Проверить код', done: true},
+        {type: 'heading', level: 0, text: 'Позже'},
+        {type: 'task', level: 0, text: 'Спланировать неделю', done: false},
+    ];
+    runtime._renderItems();
+    runtime._card.set_size(430, 370);
+    runtime._card.set_style('box-shadow: 0 10px 40px 4px rgba(29, 38, 53, 0.16);');
+    const screenshotFrame = new St.Widget({
+        width: 590,
+        height: 530,
+        style: 'background-color: #ffffff;',
+    });
+    screenshotFrame.set_position(20, 20);
+    Main.layoutManager.addTopChrome(screenshotFrame);
+    if (screenshotFrame.get_parent() !== runtime._card.get_parent())
+        throw new Error('Screenshot frame and widget have different parents');
+    runtime._resizeHandle.set_position(900, 700);
+    runtime._card.get_parent().set_child_below_sibling(screenshotFrame, runtime._card);
+    runtime._card.set_position(100, 100);
+    runtime._selectItem(1, true);
+    await delay(250);
+    await screenshot('readme-widget', screenshotFrame);
     runtime.disable();
+    screenshotFrame.destroy();
     Main.overview.hide();
     await delay(900);
     const focusRuntime = factory({Clutter, Gio, GLib, St, Main, config: {
