@@ -102,6 +102,26 @@ export async function run() {
     if (!runtime._rowWidgets[2].row.visible || !runtime._rowWidgets[3].row.visible)
         throw new Error('Expanding a task did not restore its subtasks');
     console.log('PROBE PASS: task disclosure hides descendants and skips them in navigation');
+    const firstList = runtime._rowWidgets[0].expandList;
+    if (!firstList || runtime._rowWidgets[4].expandList ||
+        firstList.accessible_name !== 'Свернуть список')
+        throw new Error('List toggle is not limited to nonempty headings');
+    firstList.emit('clicked', 1);
+    if (runtime._rowWidgets.slice(1, 5).some(w => w.row.visible) ||
+        !runtime._rowWidgets[5].row.visible || runtime._items.length !== 8 ||
+        firstList.accessible_name !== 'Показать список')
+        throw new Error('Collapsing a list hid the wrong rows');
+    runtime._selectItem(0, true);
+    runtime._handleRowKey(0, {
+        get_key_symbol: () => Clutter.KEY_Down,
+        get_state: () => 0,
+    });
+    if (runtime._selectedIndex !== 5)
+        throw new Error('Keyboard navigation entered a collapsed list');
+    firstList.emit('clicked', 1);
+    if (runtime._rowWidgets.slice(1, 5).some(w => !w.row.visible))
+        throw new Error('Expanding a list did not restore its rows');
+    console.log('PROBE PASS: list disclosure hides its rows and skips them in navigation');
     const measure = label => {
         const w = runtime._rowWidgets[4];
         const check = w.checkbox;
@@ -421,16 +441,22 @@ export async function run() {
         combinedActors.indexOf(combinedRow.checkbox) <
         combinedActors.indexOf(combinedRow.entry.get_parent()) &&
         combinedActors.indexOf(combinedRow.entry.get_parent()) <
-        combinedActors.indexOf(combinedRow.expandTask.get_parent())) ||
+        combinedActors.indexOf(combinedRow.expandTask.get_parent()) &&
+        combinedActors.indexOf(combinedRow.expandTask.get_parent()) <
+        combinedActors.indexOf(combinedRow.addSubtask)) ||
         combinedRow.expandTask.child.icon_name !== 'text-x-generic-symbolic' ||
-        combinedRow.expandChildren.child.icon_name !== 'pan-down-symbolic')
-        throw new Error('Task and comment toggles are not visually distinct or correctly placed');
+        combinedRow.expandChildren.child.icon_name !== 'pan-down-symbolic' ||
+        combinedRow.addSubtask.child.icon_name !== 'list-add-symbolic')
+        throw new Error('Task, comment, and add-subtask actions are not correctly placed');
     runtime._showActionTooltip(combinedRow.expandChildren);
     if (runtime._actionTooltip.text !== 'Свернуть подзадачи')
         throw new Error('Subtask tooltip does not describe its action');
     runtime._showActionTooltip(combinedRow.expandTask);
     if (runtime._actionTooltip.text !== 'Показать комментарий')
         throw new Error('Comment tooltip does not describe its action');
+    runtime._showActionTooltip(combinedRow.addSubtask);
+    if (runtime._actionTooltip.text !== 'Добавить подзадачу')
+        throw new Error('Add-subtask tooltip does not describe its action');
     runtime._hideActionTooltip();
     runtime._rowWidgets[1].expandChildren.emit('clicked', 1);
     runtime._rowWidgets[0].expandChildren.emit('clicked', 1);
@@ -448,6 +474,64 @@ export async function run() {
     if (!runtime._rowWidgets[2].row.visible)
         throw new Error('Nested subtasks did not expand');
     console.log('PROBE PASS: nested folds preserve child state and comment disclosure');
+    runtime._items = [
+        {type: 'heading', level: 0, text: 'Основной список'},
+        {type: 'task', level: 0, text: 'Родитель', done: false},
+        {type: 'task', level: 1, text: 'Дочерняя', done: false},
+        {type: 'heading', level: 1, text: 'Вложенный список'},
+        {type: 'task', level: 0, text: 'Вложенная задача', done: false},
+        {type: 'heading', level: 0, text: 'Другой список'},
+        {type: 'task', level: 0, text: 'Другая задача', done: false},
+        {type: 'heading', level: 0, text: 'Пустой список'},
+    ];
+    runtime._renderItems();
+    if (runtime._rowWidgets[7].expandList)
+        throw new Error('Empty list unexpectedly has a disclosure button');
+    runtime._rowWidgets[1].expandChildren.emit('clicked', 1);
+    runtime._rowWidgets[3].expandList.emit('clicked', 1);
+    runtime._rowWidgets[0].expandList.emit('clicked', 1);
+    if (runtime._rowWidgets.slice(1, 5).some(w => w.row.visible) ||
+        !runtime._rowWidgets[5].row.visible || !runtime._rowWidgets[6].row.visible)
+        throw new Error('Outer list collapse hid a sibling list');
+    runtime._rowWidgets[0].expandList.emit('clicked', 1);
+    if (!runtime._rowWidgets[1].row.visible || runtime._rowWidgets[2].row.visible ||
+        !runtime._rowWidgets[3].row.visible || runtime._rowWidgets[4].row.visible)
+        throw new Error('Opening a list lost its nested fold states');
+    runtime._renderItems();
+    if (runtime._rowWidgets[2].row.visible || runtime._rowWidgets[4].row.visible)
+        throw new Error('Re-render lost nested list or task folds');
+    runtime._rowWidgets[0].expandList.emit('clicked', 1);
+    runtime._addTaskToHeading(0);
+    await delay(150);
+    if (runtime._items[3].text !== 'Новая задача' ||
+        !runtime._rowWidgets[3].row.visible ||
+        !runtime._rowWidgets[3].entryText.has_key_focus() ||
+        runtime._items[0].listCollapsed)
+        throw new Error('Adding to a collapsed list did not reveal the new task');
+    console.log('PROBE PASS: nested list folds survive re-render and adding to a folded list');
+    runtime._items = [
+        {type: 'task', level: 0, text: 'Родитель\nКомментарий', done: false,
+            childrenCollapsed: true},
+        {type: 'task', level: 1, text: 'Первая дочерняя', done: false},
+        {type: 'task', level: 2, text: 'Внучатая', done: false},
+        {type: 'task', level: 0, text: 'Соседняя', done: false},
+        {type: 'task', level: 5, text: 'Предельная глубина', done: false},
+    ];
+    runtime._renderItems();
+    if (!runtime._rowWidgets[0].addSubtask ||
+        runtime._rowWidgets[4].addSubtask ||
+        runtime._rowWidgets[1].row.visible)
+        throw new Error('Add-subtask availability or initial fold state is wrong');
+    const sibling = runtime._items[3];
+    runtime._rowWidgets[0].addSubtask.emit('clicked', 1);
+    await delay(150);
+    if (runtime._items[3].text !== 'Новая задача' ||
+        runtime._items[3].level !== 1 || runtime._items[4] !== sibling ||
+        runtime._items[0].childrenCollapsed ||
+        !runtime._rowWidgets[3].row.visible ||
+        !runtime._rowWidgets[3].entryText.has_key_focus())
+        throw new Error('Adding a subtask did not append to the parent branch and focus it');
+    console.log('PROBE PASS: add-subtask action follows comment, opens parent, and focuses new child');
     runtime.disable();
     Main.overview.hide();
     await delay(900);

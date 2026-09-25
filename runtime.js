@@ -616,6 +616,35 @@
                 }
                 row.add_child(dragHandle);
 
+                let expandList = null;
+                if (item.type === 'heading' && this._blockRange(index).end > index + 1) {
+                    expandList = new St.Button({
+                        child: new St.Icon({
+                            icon_name: item.listCollapsed ? 'pan-end-symbolic' : 'pan-down-symbolic',
+                            icon_size: 12,
+                        }),
+                        accessible_name: item.listCollapsed ? 'Показать список' : 'Свернуть список',
+                        can_focus: true,
+                        y_align: Clutter.ActorAlign.START,
+                        style_class: 'overview-todo-expand overview-todo-list-toggle',
+                    });
+                    expandList.connect('key-focus-in', () => this._selectItem(index));
+                    this._bindActionTooltip(expandList);
+                    expandList.connect('clicked', () => {
+                        this._selectItem(index);
+                        item.listCollapsed = !item.listCollapsed;
+                        expandList.child.icon_name = item.listCollapsed
+                            ? 'pan-end-symbolic' : 'pan-down-symbolic';
+                        expandList.accessible_name = item.listCollapsed
+                            ? 'Показать список' : 'Свернуть список';
+                        if (expandList.hover)
+                            this._showActionTooltip(expandList);
+                        this._updateFoldVisibility();
+                        this._positionCard();
+                    });
+                    row.add_child(expandList);
+                }
+
                 let expandChildren = null;
                 if (item.type === 'task' && this._blockRange(index).end > index + 1) {
                     expandChildren = new St.Button({
@@ -640,7 +669,7 @@
                             ? 'Показать подзадачи' : 'Свернуть подзадачи';
                         if (expandChildren.hover)
                             this._showActionTooltip(expandChildren);
-                        this._updateChildrenVisibility();
+                        this._updateFoldVisibility();
                         this._positionCard();
                     });
                 }
@@ -895,6 +924,24 @@
                     }));
                 }
 
+                let addSubtask = null;
+                if (item.type === 'task' && item.level <
+                    Math.max(0, Number(cfg.behavior.maxLevel) || 5)) {
+                    addSubtask = new St.Button({
+                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 12,
+                            x_align: Clutter.ActorAlign.CENTER,
+                            y_align: Clutter.ActorAlign.CENTER}),
+                        accessible_name: 'Добавить подзадачу',
+                        can_focus: true,
+                        y_align: Clutter.ActorAlign.START,
+                        style_class: 'overview-todo-expand overview-todo-add-subtask',
+                    });
+                    addSubtask.connect('key-focus-in', () => this._selectItem(index));
+                    this._bindActionTooltip(addSubtask);
+                    addSubtask.connect('clicked', () => this._addSubtask(index));
+                    row.add_child(addSubtask);
+                }
+
                 if (item.type === 'heading') {
                     const hint = new St.Label({
                         text: 'Добавить задачу',
@@ -945,11 +992,12 @@
 
                 this._list.add_child(row);
                 this._rowWidgets[index] = {row, entry, entryText, checkbox, dragHandle,
-                    expandTask, expandChildren, preview, previewTitle, previewComment, remove, setEditing};
+                    expandTask, expandChildren, expandList, preview, previewTitle, previewComment,
+                    addSubtask, remove, setEditing};
                 this._updateRowAppearance(index);
                 this._updateDeleteVisibility(index);
             });
-            this._updateChildrenVisibility();
+            this._updateFoldVisibility();
             this._positionCard();
         }
 
@@ -985,21 +1033,20 @@
             this._actionTooltipOwner = null;
         }
 
-        _updateChildrenVisibility() {
-            const collapsedLevels = [];
+        _updateFoldVisibility() {
+            const collapsedEnds = [];
             this._items.forEach((item, index) => {
-                if (item.type !== 'task')
-                    collapsedLevels.length = 0;
-                else {
-                    while (collapsedLevels.length && item.level <= collapsedLevels.at(-1))
-                        collapsedLevels.pop();
-                }
+                while (collapsedEnds.length && index >= collapsedEnds.at(-1))
+                    collapsedEnds.pop();
                 const row = this._rowWidgets[index]?.row;
                 if (row)
-                    row.visible = collapsedLevels.length === 0;
-                if (item.type === 'task' && item.childrenCollapsed &&
-                    this._blockRange(index).end > index + 1)
-                    collapsedLevels.push(item.level);
+                    row.visible = collapsedEnds.length === 0;
+                if (item.type === 'heading' && item.listCollapsed ||
+                    item.type === 'task' && item.childrenCollapsed) {
+                    const end = this._blockRange(index).end;
+                    if (end > index + 1)
+                        collapsedEnds.push(end);
+                }
             });
         }
 
@@ -1555,6 +1602,7 @@
         }
 
         _addTaskToHeading(headingIndex) {
+            this._items[headingIndex].listCollapsed = false;
             let insertIndex = headingIndex + 1;
             while (insertIndex < this._items.length &&
                 this._items[insertIndex].type !== 'heading') {
@@ -1564,6 +1612,24 @@
             this._items.splice(insertIndex, 0, {
                 type: 'task',
                 level: 0,
+                text: cfg.ui.newTaskText,
+                done: false,
+            });
+            this._scheduleSave();
+            this._queueRender(insertIndex, true);
+        }
+
+        _addSubtask(parentIndex) {
+            const parent = this._items[parentIndex];
+            const maxLevel = Math.max(0, Number(cfg.behavior.maxLevel) || 5);
+            if (parent?.type !== 'task' || parent.level >= maxLevel)
+                return;
+
+            const insertIndex = this._blockRange(parentIndex).end;
+            parent.childrenCollapsed = false;
+            this._items.splice(insertIndex, 0, {
+                type: 'task',
+                level: parent.level + 1,
                 text: cfg.ui.newTaskText,
                 done: false,
             });
