@@ -977,6 +977,43 @@ export async function run() {
         focusRuntime._selectedIndex !== 1)
         throw new Error('Global add did not append to the free task block');
     console.log('PROBE PASS: global add inserts free tasks before the first list');
+    focusRuntime._items = [
+        {type: 'heading', level: 0, text: 'Список'},
+        {type: 'task', level: 0, text: 'Родитель', done: false},
+    ];
+    focusRuntime._renderItems();
+    const cancelNewItem = async add => {
+        const before = [...focusRuntime._items];
+        add();
+        await delay(150);
+        const index = focusRuntime._selectedIndex;
+        const item = focusRuntime._items[index];
+        const editor = focusRuntime._rowWidgets[index]?.entryText;
+        if (!editor?.has_key_focus() || !item || before.includes(item))
+            throw new Error('New item did not open its editor');
+        focusRuntime._handleEditorShortcut(index, escapeKey, editor);
+        await delay(150);
+        if (focusRuntime._items.length !== before.length ||
+            focusRuntime._items.some((existing, i) => existing !== before[i]) ||
+            focusRuntime._undoBar.visible)
+            throw new Error('Escape did not discard an untouched new item');
+    };
+    await cancelNewItem(() => focusRuntime._addItem('task'));
+    await cancelNewItem(() => focusRuntime._addItem('heading'));
+    await cancelNewItem(() => focusRuntime._addTaskToHeading(0));
+    await cancelNewItem(() => focusRuntime._addSubtask(1));
+    await cancelNewItem(() => focusRuntime._addSiblingTask(1));
+    focusRuntime._addItem('task');
+    await delay(150);
+    const typedItem = focusRuntime._items[0];
+    const typedEditor = focusRuntime._rowWidgets[0].entryText;
+    typedEditor.set_text('Введённый текст');
+    focusRuntime._handleEditorShortcut(0, escapeKey, typedEditor);
+    if (focusRuntime._items[0] !== typedItem ||
+        typedItem.text !== 'Новая задача' ||
+        !focusRuntime._rowWidgets[0].row.has_key_focus())
+        throw new Error('Escape removed a new item after text was entered');
+    console.log('PROBE PASS: Escape discards untouched new tasks and headings, but cancels edits after input');
     focusRuntime.disable();
     console.log('PROBE COMPLETE');
     global.context.terminate();

@@ -181,6 +181,7 @@
             this._actionTooltipOwner = null;
             this._textHistory = new WeakMap();
             this._editSnapshots = new WeakMap();
+            this._newItems = new WeakSet();
             this._restoringText = false;
             this._textSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
             this._textScaleChangedId = 0;
@@ -204,6 +205,7 @@
             this._undo = null;
             this._textHistory = new WeakMap();
             this._editSnapshots = new WeakMap();
+            this._newItems = new WeakSet();
 
             this._ensureFile();
             this._loadItems();
@@ -844,6 +846,7 @@
                             });
                         });
                     } else {
+                        this._newItems.delete(item);
                         setEditing(false);
                         this._flushSave();
                         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
@@ -870,6 +873,7 @@
                 entryText.connect('text-changed', () => {
                     if (updatingEntry || this._restoringText)
                         return;
+                    this._newItems.delete(item);
                     const previousText = item.text;
                     if (isCollapsedTask) {
                         const lines = item.text.split(/\r?\n/);
@@ -915,6 +919,7 @@
                     }
 
                     if (isEnter) {
+                        this._newItems.delete(item);
                         this._editSnapshots.delete(item);
                         this._flushSave();
                         this._selectItem(index, true);
@@ -927,6 +932,7 @@
 
                     const backwards = symbol === Clutter.KEY_ISO_Left_Tab ||
                         Boolean(state & Clutter.ModifierType.SHIFT_MASK);
+                    this._newItems.delete(item);
                     this._changeItemLevel(index, backwards ? -1 : 1);
                     return Clutter.EVENT_STOP;
                 });
@@ -1557,7 +1563,10 @@
             const symbol = event.get_key_symbol();
             const state = event.get_state();
             if (symbol === Clutter.KEY_Escape) {
-                this._cancelEdit(index, entryText);
+                if (this._newItems.has(this._items[index]))
+                    this._discardNewItem(index);
+                else
+                    this._cancelEdit(index, entryText);
                 return Clutter.EVENT_STOP;
             }
             if ((state & Clutter.ModifierType.CONTROL_MASK) &&
@@ -1818,9 +1827,7 @@
             const firstHeading = this._items.findIndex(existing => existing.type === 'heading');
             const insertIndex = type === 'task' && firstHeading >= 0
                 ? firstHeading : this._items.length;
-            this._items.splice(insertIndex, 0, item);
-            this._scheduleSave();
-            this._queueRender(insertIndex, true);
+            this._insertNewItem(insertIndex, item);
         }
 
         _addTaskToHeading(headingIndex) {
@@ -1831,14 +1838,12 @@
                 insertIndex++;
             }
 
-            this._items.splice(insertIndex, 0, {
+            this._insertNewItem(insertIndex, {
                 type: 'task',
                 level: 0,
                 text: cfg.ui.newTaskText,
                 done: false,
             });
-            this._scheduleSave();
-            this._queueRender(insertIndex, true);
         }
 
         _addSubtask(parentIndex) {
@@ -1849,27 +1854,41 @@
 
             const insertIndex = this._blockRange(parentIndex).end;
             parent.childrenCollapsed = false;
-            this._items.splice(insertIndex, 0, {
+            this._insertNewItem(insertIndex, {
                 type: 'task',
                 level: parent.level + 1,
                 text: cfg.ui.newTaskText,
                 done: false,
             });
-            this._scheduleSave();
-            this._queueRender(insertIndex, true);
         }
 
         _addSiblingTask(index) {
             const item = this._items[index];
             const insertIndex = this._blockRange(index).end;
-            this._items.splice(insertIndex, 0, {
+            this._insertNewItem(insertIndex, {
                 type: 'task',
                 level: item.level,
                 text: cfg.ui.newTaskText,
                 done: false,
             });
+        }
+
+        _insertNewItem(index, item) {
+            this._items.splice(index, 0, item);
+            this._newItems.add(item);
             this._scheduleSave();
-            this._queueRender(insertIndex, true);
+            this._queueRender(index, true);
+        }
+
+        _discardNewItem(index) {
+            const [item] = this._items.splice(index, 1);
+            this._newItems.delete(item);
+            this._editSnapshots.delete(item);
+            this._textHistory.delete(item);
+            const nextIndex = Math.min(index, this._items.length - 1);
+            this._selectedIndex = nextIndex;
+            this._scheduleSave();
+            this._queueRender(-1, false, nextIndex);
         }
 
         _queueRender(focusIndex = -1, selectAll = false, focusRowIndex = -1,
