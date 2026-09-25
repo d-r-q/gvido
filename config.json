@@ -1,0 +1,34 @@
+{
+  "themeFile": "theme.css",
+  "dataFile": "~/todo.md",
+  "defaultContent": "# Сейчас\n- [ ] Первая задача\n  - [ ] Вложенная задача\n\n# Позже\n- [ ] Ещё одна задача\n",
+  "ui": {
+    "title": "Задачи",
+    "addTaskLabel": "+ Задача",
+    "addHeadingLabel": "+ Заголовок",
+    "addTaskToHeadingLabel": "+",
+    "newTaskText": "Новая задача",
+    "newHeadingText": "Новый заголовок",
+    "deleteLabel": "×",
+    "checkedLabel": "✓",
+    "dragHandleLabel": "⋮⋮"
+  },
+  "behavior": {
+    "saveDelayMs": 250,
+    "maxLevel": 5,
+    "indentSpaces": 2,
+    "indentPx": 20,
+    "reloadTodoOnOverview": true,
+    "dragThresholdPx": 7
+  },
+  "layout": {
+    "margin": 24,
+    "panelGap": 24,
+    "widthFraction": 0.3,
+    "widthMin": 330,
+    "widthMax": 430,
+    "heightFraction": 0.64,
+    "heightMin": 360,
+    "heightMax": 660
+  }
+}

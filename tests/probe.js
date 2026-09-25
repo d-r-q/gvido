@@ -1,0 +1,339 @@
+import Clutter from 'gi://Clutter';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Keyboard from 'resource:///org/gnome/shell/ui/status/keyboard.js';
+
+const root = GLib.getenv('OVERVIEW_TODO_TEST_ROOT');
+const output = GLib.getenv('OVERVIEW_TODO_TEST_OUTPUT');
+if (!root || !output)
+    throw new Error('Set OVERVIEW_TODO_TEST_ROOT and OVERVIEW_TODO_TEST_OUTPUT');
+const delay = ms => new Promise(resolve => GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+    resolve();
+    return GLib.SOURCE_REMOVE;
+}));
+async function screenshot(name, actor) {
+    const stream = Gio.File.new_for_path(`${output}/${name}.png`).replace(null, false, Gio.FileCreateFlags.NONE, null);
+    const [x, y] = actor.get_transformed_position();
+    const [width, height] = actor.get_transformed_size();
+    await new Shell.Screenshot().screenshot_area(
+        Math.round(x), Math.round(y), Math.round(width), Math.round(height), stream);
+    stream.close(null);
+}
+
+export async function run() {
+    const [, bytes] = Gio.File.new_for_path(GLib.getenv('PROBE_RUNTIME') || `${root}/runtime.js`).load_contents(null);
+    const factory = eval(new TextDecoder().decode(bytes));
+    const runtime = factory({Clutter, Gio, GLib, St, Main, Keyboard, config: {}});
+    runtime._items = [
+        {type: 'heading', level: 0, text: 'Сегодня'},
+        {type: 'task', level: 0, text: 'Подготовить релиз', done: false},
+        {type: 'task', level: 1, text: 'Проверить изменения', done: true},
+        {type: 'task', level: 1, text: 'Обновить документацию', done: false},
+        {type: 'task', level: 0, text: 'Обсудить дизайн\nОтступы и состояния кнопок', done: false},
+        {type: 'heading', level: 0, text: 'Позже'},
+        {type: 'task', level: 0, text: 'Разобрать заметки', done: false},
+        {type: 'task', level: 0, text: 'Спланировать неделю', done: false},
+    ];
+    runtime._buildUi();
+    runtime._renderItems();
+    runtime._card.set_size(430, 600);
+    runtime._card.set_position(100, 100);
+    runtime._resizeHandle.set_position(105, 677);
+    Main.layoutManager.addTopChrome(runtime._card);
+    Main.layoutManager.addTopChrome(runtime._resizeHandle);
+    St.ThemeContext.get_for_stage(global.stage).get_theme().load_stylesheet(Gio.File.new_for_path(`${root}/theme.css`));
+    await delay(1000);
+    runtime._focusSelection();
+    if (runtime._selectedIndex !== 0 || !runtime._rowWidgets[0].row.has_key_focus() ||
+        runtime._rowWidgets[0].entryText.has_key_focus())
+        throw new Error('Opening did not focus the first row without editing');
+    runtime._selectItem(1);
+    runtime._card.grab_key_focus();
+    runtime._focusSelection();
+    if (runtime._selectedIndex !== 1 || !runtime._rowWidgets[1].row.has_key_focus() ||
+        runtime._rowWidgets[1].entryText.has_key_focus())
+        throw new Error('Opening did not restore the selected row without editing');
+    console.log('PROBE PASS: opening focuses first or selected row without editing');
+    for (const i of [0, 4, 5]) {
+        const row = runtime._rowWidgets[i].row;
+        for (const button of row.get_children().filter(actor =>
+            ['overview-todo-add-to-heading', 'overview-todo-expand', 'overview-todo-delete']
+                .some(name => actor.has_style_class_name(name)))) {
+            const [x, y] = button.get_transformed_position();
+            const [width, height] = button.get_transformed_size();
+            const [iconX, iconY] = button.child.get_transformed_position();
+            const [iconWidth, iconHeight] = button.child.get_transformed_size();
+            console.log(`ACTION row=${i} class=${button.style_class} buttonCenter=${x + width / 2},${y + height / 2} iconCenter=${iconX + iconWidth / 2},${iconY + iconHeight / 2}`);
+        }
+    }
+    const checkboxRow = runtime._rowWidgets[1];
+    checkboxRow.checkbox.emit('clicked', 1);
+    if (!runtime._items[1].done || runtime._rowWidgets[1] !== checkboxRow ||
+        checkboxRow.entryText.has_key_focus())
+        throw new Error('Checkbox click rebuilt the row or entered edit mode');
+    console.log('PROBE PASS: checkbox click does not enter edit mode');
+    const measure = label => {
+        const w = runtime._rowWidgets[4];
+        const check = w.checkbox;
+        console.log(`MEASURE ${label} check=${check.get_size()} checkY=${check.get_transformed_position()[1]} rowY=${w.row.get_transformed_position()[1]} titleY=${w.previewTitle.get_transformed_position()[1]}`);
+    };
+    measure('collapsed');
+    runtime._rowWidgets[4].row.get_children().find(child => child.has_style_class_name('overview-todo-expand')).emit('clicked', 1);
+    await delay(1000);
+    measure('expanded');
+    const text = runtime._rowWidgets[4].entryText;
+    if (text.has_key_focus() || runtime._rowWidgets[4].entry.visible || !runtime._rowWidgets[4].preview.visible)
+        throw new Error('Disclosure entered edit mode');
+    console.log(`PROBE selection=${text.get_selection()} cursor=${text.get_cursor_position()} bound=${text.get_selection_bound()}`);
+    await screenshot('expanded', runtime._card);
+    runtime._rowWidgets[4].preview.emit('clicked', 1);
+    if (!text.has_key_focus() || !runtime._rowWidgets[4].entry.visible)
+        throw new Error('Explicit click did not enter edit mode');
+    text.set_cursor_position(2);
+    text.set_selection(2, 2);
+    await delay(1000);
+    await screenshot('clicked', runtime._card);
+    text.set_selection(0, -1);
+    await delay(500);
+    await screenshot('selected', runtime._card);
+    const color = text.get_selection_color();
+    console.log(`PROBE selection-color=${color.red},${color.green},${color.blue}`);
+    runtime._card.grab_key_focus();
+    await delay(300);
+    await screenshot('design', runtime._card);
+    runtime._card.set_width(330);
+    await delay(300);
+    await screenshot('narrow', runtime._card);
+    runtime._card.set_width(430);
+    runtime._addItem('task');
+    await delay(300);
+    const index = runtime._items.length - 1;
+    const editor = runtime._rowWidgets[index].entryText;
+    editor.set_text('Новое дело');
+    editor.insert_text('\n', -1);
+    await delay(300);
+    // Type into the current editor as a user would after Shift+Enter.
+    const currentEditor = runtime._rowWidgets[index].entryText;
+    currentEditor.insert_text('коммент', -1);
+    currentEditor.set_cursor_position(3);
+    await delay(300);
+    if (!runtime._rowWidgets[index].expandTask?.visible)
+        throw new Error('Missing expand button after typing a new comment');
+    if (runtime._rowWidgets[index].entryText !== editor || editor.get_cursor_position() !== 3)
+        throw new Error('Typing a comment rebuilt the editor or moved the caret');
+    const fullText = runtime._items[index].text;
+    runtime._rowWidgets[index].expandTask.emit('clicked', 1);
+    await delay(300);
+    if (runtime._rowWidgets[index].entryText.get_text() !== 'Новое дело' || runtime._items[index].text !== fullText)
+        throw new Error('Collapse lost the comment');
+    runtime._rowWidgets[index].expandTask.emit('clicked', 1);
+    await delay(300);
+    if (runtime._rowWidgets[index].entryText.get_text() !== fullText)
+        throw new Error('Expand did not restore the comment');
+    if (runtime._rowWidgets[index].entryText.has_key_focus() || !runtime._rowWidgets[index].preview.visible)
+        throw new Error('New comment disclosure entered edit mode');
+    await screenshot('new-comment', runtime._card);
+    runtime._rowWidgets[index].preview.emit('clicked', 1);
+    runtime._rowWidgets[index].entryText.set_text('Новое дело\n');
+    if (runtime._rowWidgets[index].expandTask.visible)
+        throw new Error('Expand button remains after deleting the comment');
+    console.log('PROBE PASS: new comment toggle, stable editor/caret, collapse/expand, comment deletion');
+    runtime._sizeOverride = {width: 500, height: 500};
+    runtime._positionCard();
+    if (runtime._card.width !== 500 || runtime._card.height !== 500 ||
+        !runtime._resizeHandle)
+        throw new Error('Resize size/handle unavailable');
+    runtime._sizeFile = Gio.File.new_for_path(`${output}/probe-size.json`);
+    runtime._saveSize();
+    runtime._sizeOverride = null;
+    runtime._loadSize();
+    if (runtime._sizeOverride?.width !== 500 || runtime._sizeOverride?.height !== 500)
+        throw new Error('Resize size did not persist');
+    console.log('PROBE PASS: resize bounds and saved size');
+    runtime._rowWidgets[4].row.get_children().find(child =>
+        child.has_style_class_name('overview-todo-delete')).emit('clicked', 1);
+    await delay(300);
+    if (runtime._items[4].type !== 'heading' ||
+        runtime._rowWidgets[4].entryText.has_key_focus() ||
+        !runtime._rowWidgets[4].entry.visible)
+        throw new Error('Deleting a task opened the following heading for editing');
+    console.log('PROBE PASS: deleting a task leaves the following heading unedited');
+    Main.overview.show();
+    await delay(500);
+    const layoutEditor = runtime._rowWidgets[1].entryText;
+    runtime._rowWidgets[1].setEditing(true);
+    layoutEditor.grab_key_focus();
+    layoutEditor.set_cursor_position(3);
+    const manager = Keyboard.getInputSourceManager();
+    if (Main.panel.statusArea.keyboard?._inputSourceManager !== manager)
+        throw new Error('Panel keyboard does not expose the input source manager');
+    const popup = new St.Button({can_focus: true});
+    Main.layoutManager.addTopChrome(popup);
+    manager._switcherPopup = popup;
+    popup.grab_key_focus();
+    await delay(100);
+    if (!runtime._rowWidgets[1].entry.visible)
+        throw new Error('Layout popup hid the editor');
+    popup.destroy();
+    manager._switcherPopup = null;
+    await delay(100);
+    if (!layoutEditor.has_key_focus() || layoutEditor.get_cursor_position() !== 3)
+        throw new Error('Layout popup did not restore editor focus/caret');
+    console.log('PROBE PASS: layout popup preserves editor and restores focus');
+    runtime._card.grab_key_focus();
+    if (runtime._rowWidgets[1].entry.visible || !runtime._rowWidgets[1].preview.visible)
+        throw new Error('Ordinary focus loss did not leave edit mode');
+    console.log('PROBE PASS: ordinary focus loss still leaves edit mode');
+    runtime._selectItem(1, true);
+    if (!runtime._rowWidgets[1].row.has_key_focus() ||
+        !runtime._rowWidgets[1].row.has_style_class_name('selected'))
+        throw new Error('Selection is not highlighted/focused');
+    runtime._handleRowKey(1, {
+        get_key_symbol: () => Clutter.KEY_Down,
+        get_state: () => 0,
+    });
+    if (runtime._selectedIndex !== 2 ||
+        !runtime._rowWidgets[2].row.has_key_focus())
+        throw new Error('Down arrow did not move selection');
+    await screenshot('selected-row', runtime._card);
+    runtime._handleRowKey(2, {
+        get_key_symbol: () => Clutter.KEY_Return,
+        get_state: () => 0,
+    });
+    if (!runtime._rowWidgets[2].entryText.has_key_focus())
+        throw new Error('Enter did not open the editor');
+    console.log('PROBE PASS: selected row, arrow navigation, Enter to edit');
+    const movedItem = runtime._items[2];
+    runtime._rowWidgets[2].entryText.set_cursor_position(3);
+    runtime._moveItem(2, 1, {cursor: 3, bound: 3});
+    await delay(150);
+    if (runtime._items[3] !== movedItem || runtime._selectedIndex !== 3 ||
+        !runtime._rowWidgets[3].entryText.has_key_focus() ||
+        runtime._rowWidgets[3].entryText.get_cursor_position() !== 3)
+        throw new Error('Alt+Down did not move item while preserving edit focus/caret');
+    runtime._selectItem(3, true);
+    runtime._handleRowKey(3, {
+        get_key_symbol: () => Clutter.KEY_Up,
+        get_state: () => Clutter.ModifierType.MOD1_MASK,
+    });
+    await delay(150);
+    if (runtime._items[2] !== movedItem || runtime._selectedIndex !== 2 ||
+        !runtime._rowWidgets[2].row.has_key_focus() ||
+        runtime._rowWidgets[2].entryText.has_key_focus())
+        throw new Error('Alt+Up did not move selected item without editing');
+    console.log('PROBE PASS: Alt+Up/Down reorders in edit and selection modes');
+    const heading = runtime._items[0];
+    const section = runtime._items.slice(0, runtime._blockRange(0).end);
+    runtime._moveItem(0, 1);
+    await delay(150);
+    const movedHeading = runtime._items.indexOf(heading);
+    if (movedHeading <= 0 ||
+        runtime._items.slice(movedHeading, movedHeading + section.length)
+            .some((item, i) => item !== section[i]))
+        throw new Error('Moving a heading split its section');
+    console.log('PROBE PASS: moving a heading preserves its section');
+
+    const firstHeading = {type: 'heading', level: 0, text: 'Первый раздел'};
+    const movingTask = {type: 'task', level: 0, text: 'Перенести', done: false};
+    const childTask = {type: 'task', level: 1, text: 'Дочернее дело', done: false};
+    const secondHeading = {type: 'heading', level: 0, text: 'Второй раздел'};
+    const secondTask = {type: 'task', level: 0, text: 'Удалить', done: false};
+    runtime._items = [firstHeading, movingTask, childTask, secondHeading, secondTask];
+    runtime._selectedIndex = -1;
+    runtime._renderItems();
+    const altDown = {
+        get_key_symbol: () => Clutter.KEY_Down,
+        get_state: () => Clutter.ModifierType.MOD1_MASK,
+    };
+    const altUp = {
+        get_key_symbol: () => Clutter.KEY_Up,
+        get_state: () => Clutter.ModifierType.MOD1_MASK,
+    };
+    runtime._selectItem(1, true);
+    runtime._handleRowKey(1, altDown);
+    await delay(150);
+    if (runtime._items[1] !== secondHeading || runtime._items[2] !== movingTask ||
+        runtime._items[3] !== childTask || runtime._selectedIndex !== 2 ||
+        !runtime._rowWidgets[2].row.has_key_focus())
+        throw new Error('Alt+Down did not move a task block into the next section');
+    runtime._handleRowKey(2, altUp);
+    await delay(150);
+    if (runtime._items[1] !== movingTask || runtime._items[2] !== childTask ||
+        runtime._items[3] !== secondHeading)
+        throw new Error('Alt+Up did not move a task block into the previous section');
+    runtime._rowWidgets[1].preview.emit('clicked', 1);
+    const crossEditor = runtime._rowWidgets[1].entryText;
+    crossEditor.set_cursor_position(2);
+    runtime._handleEditorShortcut(1, altDown, crossEditor);
+    await delay(150);
+    if (runtime._items[2] !== movingTask ||
+        !runtime._rowWidgets[2].entryText.has_key_focus() ||
+        runtime._rowWidgets[2].entryText.get_cursor_position() !== 2)
+        throw new Error('Cross-section move lost edit focus/caret');
+    console.log('PROBE PASS: Alt+Up/Down crosses sections with child tasks and edit focus');
+
+    const ctrlEnter = {
+        get_key_symbol: () => Clutter.KEY_Return,
+        get_state: () => Clutter.ModifierType.CONTROL_MASK,
+    };
+    const editingTask = runtime._rowWidgets[2];
+    runtime._handleEditorShortcut(2, ctrlEnter, editingTask.entryText);
+    if (!movingTask.done || runtime._rowWidgets[2] !== editingTask ||
+        !editingTask.entryText.has_key_focus())
+        throw new Error('Ctrl+Enter did not toggle completion during editing');
+    runtime._selectItem(2, true);
+    runtime._handleRowKey(2, ctrlEnter);
+    if (movingTask.done || !runtime._rowWidgets[2].row.has_key_focus() ||
+        runtime._rowWidgets[2].entryText.has_key_focus())
+        throw new Error('Ctrl+Enter did not toggle completion on a selected task');
+    console.log('PROBE PASS: Ctrl+Enter toggles completion in both modes');
+
+    const deleteKey = {
+        get_key_symbol: () => Clutter.KEY_Delete,
+        get_state: () => 0,
+    };
+    runtime._rowWidgets[4].preview.emit('clicked', 1);
+    const deleteEditor = runtime._rowWidgets[4].entryText;
+    if (runtime._handleEditorShortcut(4, deleteKey, deleteEditor) !==
+        Clutter.EVENT_PROPAGATE || runtime._items.length !== 5)
+        throw new Error('Delete was intercepted while editing text');
+    runtime._selectItem(4, true);
+    runtime._handleRowKey(4, deleteKey);
+    await delay(150);
+    if (runtime._items.includes(secondTask) || runtime._items.length !== 4 ||
+        runtime._rowWidgets[3].entryText.has_key_focus())
+        throw new Error('Delete did not remove the selected task cleanly');
+    runtime._handleRowKey(1, deleteKey);
+    if (runtime._items.length !== 4 || runtime._items[1] !== secondHeading)
+        throw new Error('Delete removed a section heading');
+    console.log('PROBE PASS: Delete removes selected task, not editor text');
+    runtime.disable();
+    Main.overview.hide();
+    await delay(900);
+    const focusRuntime = factory({Clutter, Gio, GLib, St, Main, config: {
+        dataFile: `${output}/focus-todo.md`,
+        defaultContent: '# Первый раздел\n- [ ] Первое дело\n',
+    }});
+    focusRuntime.enable();
+    Main.overview.show();
+    await delay(900);
+    if (!focusRuntime._rowWidgets[0].row.has_key_focus() ||
+        focusRuntime._rowWidgets[0].entryText.has_key_focus())
+        throw new Error('Overview opening did not focus the first row');
+    Main.overview.hide();
+    await delay(900);
+    focusRuntime._selectItem(1);
+    Main.overview.show();
+    await delay(900);
+    if (focusRuntime._selectedIndex !== 1 ||
+        !focusRuntime._rowWidgets[1].row.has_key_focus() ||
+        focusRuntime._rowWidgets[1].entryText.has_key_focus())
+        throw new Error('Overview reopening did not restore the selected row');
+    console.log('PROBE PASS: Overview opening and reopening focus the selected row');
+    focusRuntime.disable();
+    console.log('PROBE COMPLETE');
+    global.context.terminate();
+}

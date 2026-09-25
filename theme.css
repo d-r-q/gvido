@@ -1,0 +1,185 @@
+/* A light GNOME-style utility panel. Keep editable text selection explicit. */
+.overview-todo-card {
+  padding: 18px 12px 12px;
+  spacing: 16px;
+  color: #2e3436;
+  background-color: #fafafb;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px 4px rgba(0, 0, 0, 0.20);
+}
+
+.overview-todo-resize-handle {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: #a3a6ae;
+  background-color: transparent;
+  border-radius: 6px;
+  font-size: 18px;
+}
+.overview-todo-resize-handle:hover {
+  color: #3584e4;
+  background-color: #e9e9ee;
+}
+
+.overview-todo-toolbar {
+  spacing: 6px;
+  padding: 0 6px;
+}
+
+.overview-todo-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e3436;
+}
+
+.overview-todo-action {
+  padding: 8px 10px;
+  color: #43474c;
+  background-color: #ebebee;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.overview-todo-action:hover { background-color: #dfdfe4; }
+.overview-todo-action:active { background-color: #d3d3da; }
+.overview-todo-action:focus { border-color: #3584e4; }
+
+.overview-todo-action-primary {
+  color: #ffffff;
+  background-color: #3584e4;
+}
+.overview-todo-action-primary:hover { background-color: #4990e7; }
+.overview-todo-action-primary:active { background-color: #1c71d8; }
+.overview-todo-action-primary:focus { border-color: #1a5fb4; }
+
+.overview-todo-scroll {
+  background-color: #ffffff;
+  border: 1px solid #e5e5e9;
+  border-radius: 12px;
+}
+
+.overview-todo-list {
+  spacing: 2px;
+  padding: 8px 16px 8px 4px;
+}
+
+.overview-todo-row {
+  spacing: 4px;
+  min-height: 38px;
+  margin-right: 6px;
+  border-radius: 8px;
+  transition-duration: 120ms;
+}
+.overview-todo-row:hover { background-color: #f5f5f7; }
+.overview-todo-row.selected,
+.overview-todo-row.selected:hover { background-color: #e8f2ff; }
+.overview-todo-heading-after-task { margin-top: 16px; }
+
+.overview-todo-entry {
+  padding: 6px 5px;
+  color: #2e3436;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  selection-background-color: #c5defa;
+  selected-color: #1b3658;
+}
+.overview-todo-entry:focus {
+  background-color: #f0f6fd;
+  border-color: #99c1f1;
+}
+
+.overview-todo-task {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.overview-todo-preview {
+  padding: 6px 5px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  text-align: left;
+}
+.overview-todo-preview:focus { border-color: #99c1f1; }
+.overview-todo-preview-content { spacing: 7px; }
+.overview-todo-comment {
+  font-size: 12px;
+  color: #6f737a;
+  padding: 2px 0 2px 9px;
+  border-left: 2px solid #dedfe4;
+}
+.overview-todo-task.completed {
+  color: #92959b;
+  text-decoration: line-through;
+}
+.overview-todo-heading {
+  color: #454950;
+  font-weight: 700;
+}
+.overview-todo-heading.heading-1 { font-size: 15px; }
+.overview-todo-heading.heading-2 { font-size: 14px; }
+.overview-todo-heading.heading-3,
+.overview-todo-heading.heading-4,
+.overview-todo-heading.heading-5,
+.overview-todo-heading.heading-6 { font-size: 13px; }
+
+.overview-todo-check-small {
+  min-width: 0;
+  min-height: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: 8px;
+  margin-right: 10px;
+  color: #ffffff;
+  background-color: #ffffff;
+  border: 1px solid #b6b9c0;
+  border-radius: 4px;
+  transition-duration: 120ms;
+}
+.overview-todo-check-small:hover,
+.overview-todo-check-small:focus { border-color: #3584e4; }
+.overview-todo-check-small.checked {
+  background-color: #3584e4;
+  border-color: #3584e4;
+}
+.overview-todo-check-small.checked:hover { background-color: #1c71d8; }
+
+.overview-todo-expand,
+.overview-todo-add-to-heading,
+.overview-todo-delete,
+.overview-todo-drag-handle {
+  width: 24px;
+  height: 28px;
+  margin-top: 1px;
+  padding: 0;
+  color: #8c9099;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  transition-duration: 120ms;
+}
+.overview-todo-drag-handle {
+  width: 12px;
+  color: #c5c7ce;
+}
+.overview-todo-expand:hover,
+.overview-todo-add-to-heading:hover,
+.overview-todo-drag-handle:hover {
+  color: #2e3436;
+  background-color: #e9e9ee;
+}
+.overview-todo-expand:focus,
+.overview-todo-add-to-heading:focus,
+.overview-todo-delete:focus,
+.overview-todo-drag-handle:focus { border-color: #3584e4; }
+.overview-todo-delete:hover {
+  color: #c01c28;
+  background-color: #fbe9eb;
+}
+
+.overview-todo-drop-before { border-top: 2px solid #3584e4; }
+.overview-todo-drop-after { border-bottom: 2px solid #3584e4; }
