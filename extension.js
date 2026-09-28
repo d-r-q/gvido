@@ -6,7 +6,8 @@ import St from 'gi://St';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const LIVE_FILES = new Set(['runtime.js', 'config.json', 'theme.css']);
+const LIVE_FILES = new Set(['runtime.js', 'config.json', 'theme.css',
+    'document-text-symbolic.svg']);
 const RELOAD_DELAY_MS = 120;
 
 function decode(bytes) {

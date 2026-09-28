@@ -26,7 +26,8 @@ async function screenshot(name, actor) {
 export async function run() {
     const [, bytes] = Gio.File.new_for_path(GLib.getenv('PROBE_RUNTIME') || `${root}/runtime.js`).load_contents(null);
     const factory = eval(new TextDecoder().decode(bytes));
-    const runtime = factory({Clutter, Gio, GLib, St, Main, Keyboard, config: {}});
+    const runtime = factory({Clutter, Gio, GLib, St, Main, Keyboard,
+        extensionPath: root, config: {}});
     runtime._items = [
         {type: 'heading', level: 0, text: 'Сегодня'},
         {type: 'task', level: 0, text: 'Подготовить релиз', done: false},
@@ -669,7 +670,7 @@ export async function run() {
         combinedActors.indexOf(combinedRow.expandTask.get_parent()) &&
         combinedActors.indexOf(combinedRow.expandTask.get_parent()) <
         combinedActors.indexOf(combinedRow.addSubtask)) ||
-        combinedRow.expandTask.child.icon_name !== 'document-properties-symbolic' ||
+        !combinedRow.expandTask.child.gicon.get_file().get_basename().startsWith('document-text-') ||
         combinedRow.expandChildren.child.icon_name !== 'pan-down-symbolic' ||
         combinedRow.addSubtask.child.icon_name !== 'list-add-symbolic')
         throw new Error('Task, comment, and add-subtask actions are not correctly placed');
@@ -954,7 +955,13 @@ export async function run() {
                 throw new Error(`Right action geometry differs: ${button.style_class}`);
         }
     }
-    if (actionRows[2].expandTask.child.icon_name !== 'document-properties-symbolic' ||
+    const [, svgBytes] = Gio.File.new_for_path(`${root}/document-text-symbolic.svg`)
+        .load_contents(null);
+    const svgHash = GLib.compute_checksum_for_string(GLib.ChecksumType.SHA256,
+        new TextDecoder().decode(svgBytes), -1);
+    if (actionRows[2].expandTask.child.gicon.get_file().get_basename() !==
+            `document-text-${svgHash}-symbolic.svg` ||
+        !actionRows[2].expandTask.child.is_symbolic ||
         actionRows[1].addSubtask.child.icon_name !== 'list-add-symbolic' ||
         actionRows[1].remove.child.icon_name !== 'user-trash-symbolic' ||
         actionRows[0].expandTask.visible || actionRows[1].expandTask.visible)
@@ -978,8 +985,40 @@ export async function run() {
     runtime.disable();
     Main.overview.hide();
     await delay(900);
+    const iconFixtureDir = Gio.File.new_for_path(`${output}/icon-fixture`);
+    iconFixtureDir.make_directory(null);
+    const iconFixture = iconFixtureDir.get_child('document-text-symbolic.svg');
+    Gio.File.new_for_path(`${root}/document-text-symbolic.svg`)
+        .copy(iconFixture, Gio.FileCopyFlags.NONE, null, null);
+    const iconRuntime = factory({Clutter, Gio, GLib, St, Main,
+        extensionPath: iconFixtureDir.get_path(), config: {
+            dataFile: `${output}/icon-fixture-todo.md`,
+            defaultContent: '- [ ] Проверка иконки\n',
+        }});
+    iconRuntime.enable();
+    Main.overview.show();
+    await delay(900);
+    iconRuntime._items[0].text = 'Проверка иконки\nКомментарий';
+    iconRuntime._renderItems();
+    await delay(200);
+    const beforeIconPath = iconRuntime._rowWidgets[0].expandTask.child.gicon
+        .get_file().get_path();
+    if (!iconRuntime._rowWidgets[0].expandTask.child.is_symbolic)
+        throw new Error('The visible document icon is not symbolic before editing the SVG');
+    const [, iconBytes] = iconFixture.load_contents(null);
+    const changedSvg = `${new TextDecoder().decode(iconBytes)}\n<!-- updated -->\n`;
+    iconFixture.replace_contents(changedSvg, null, false, Gio.FileCreateFlags.NONE, null);
+    await delay(700);
+    const refreshedIcon = iconRuntime._rowWidgets[0].expandTask.child;
+    if (refreshedIcon.gicon.get_file().get_path() === beforeIconPath ||
+        !refreshedIcon.is_symbolic)
+        throw new Error('Editing the SVG did not refresh the symbolic icon in place');
+    iconRuntime.disable();
+    Main.overview.hide();
+    await delay(900);
+    console.log('PROBE PASS: editing the SVG refreshes the icon without restarting GNOME Shell');
     let openedPreferences = 0;
-    const focusRuntime = factory({Clutter, Gio, GLib, St, Main,
+    const focusRuntime = factory({Clutter, Gio, GLib, St, Main, extensionPath: root,
         openPreferences: () => openedPreferences++, config: {
         dataFile: `${output}/focus-todo.md`,
         defaultContent: '# Первый раздел\n- [ ] Первое дело\n',
@@ -1236,7 +1275,7 @@ export async function run() {
         Gio.File.new_for_path(`${output}/config/overview-todo-settings.json`).load_contents(null)[1]));
     if (savedSettings.dataFile !== newDataPath)
         throw new Error('Data file path did not persist');
-    const restoredRuntime = factory({Clutter, Gio, GLib, St, Main, config: {
+    const restoredRuntime = factory({Clutter, Gio, GLib, St, Main, extensionPath: root, config: {
         dataFile: `${output}/focus-todo.md`,
     }});
     restoredRuntime._settingsFile = Gio.File.new_for_path(`${output}/config/overview-todo-settings.json`);

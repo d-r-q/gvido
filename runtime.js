@@ -1,4 +1,4 @@
-({Clutter, Gio, GLib, St, Main, config, openPreferences}) => {
+({Clutter, Gio, GLib, St, Main, config, openPreferences, extensionPath}) => {
     const DEFAULTS = {
         dataFile: '~/todo.md',
         defaultContent: '# Сейчас\n- [ ] Первая задача\n  - [ ] Вложенная задача\n\n# Позже\n- [ ] Ещё одна задача\n',
@@ -49,6 +49,26 @@
     }
 
     const cfg = mergedConfig(config);
+
+    function documentTextIcon() {
+        const source = Gio.File.new_for_path(`${extensionPath}/document-text-symbolic.svg`);
+        const [ok, bytes] = source.load_contents(null);
+        if (!ok)
+            throw new Error('Could not read document-text-symbolic.svg');
+        const svg = new TextDecoder().decode(bytes);
+        const hash = GLib.compute_checksum_for_string(GLib.ChecksumType.SHA256, svg, -1);
+        const cacheDir = Gio.File.new_for_path(GLib.build_filenamev([
+            GLib.get_user_cache_dir(), 'gvido', 'icons',
+        ]));
+        if (!cacheDir.query_exists(null))
+            cacheDir.make_directory_with_parents(null);
+        const cached = cacheDir.get_child(`document-text-${hash}-symbolic.svg`);
+        if (!cached.query_exists(null))
+            cached.replace_contents(bytes, null, false, Gio.FileCreateFlags.NONE, null);
+        return new Gio.FileIcon({file: cached});
+    }
+
+    let documentTextGicon = documentTextIcon();
 
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -173,6 +193,8 @@
             this._settingsFile = null;
             this._settingsMonitor = null;
             this._settingsReloadId = 0;
+            this._iconMonitor = null;
+            this._iconReloadId = 0;
             this._dataPath = cfg.dataFile;
             this._list = null;
             this._scroll = null;
@@ -202,6 +224,7 @@
                 GLib.get_user_config_dir(), 'overview-todo-size.json']));
             this._loadSize();
             this._watchSettings();
+            this._watchDocumentIcon();
             this._items = [];
             this._rowWidgets = [];
             this._selectedIndex = -1;
@@ -255,9 +278,15 @@
             this._cancelResize();
             this._settingsMonitor?.cancel();
             this._settingsMonitor = null;
+            this._iconMonitor?.cancel();
+            this._iconMonitor = null;
             if (this._settingsReloadId) {
                 GLib.Source.remove(this._settingsReloadId);
                 this._settingsReloadId = 0;
+            }
+            if (this._iconReloadId) {
+                GLib.Source.remove(this._iconReloadId);
+                this._iconReloadId = 0;
             }
 
             if (this._saveSourceId) {
@@ -411,6 +440,38 @@
                 });
             } catch (error) {
                 console.error(`[Overview Todo] Could not watch settings: ${error}`);
+            }
+        }
+
+        _watchDocumentIcon() {
+            try {
+                const directory = Gio.File.new_for_path(extensionPath);
+                this._iconMonitor = directory.monitor_directory(
+                    Gio.FileMonitorFlags.WATCH_MOVES, null);
+                this._iconMonitor.connect('changed', (_monitor, file, otherFile) => {
+                    if (![file, otherFile].filter(Boolean).some(item =>
+                        item.get_basename() === 'document-text-symbolic.svg'))
+                        return;
+                    if (this._iconReloadId)
+                        GLib.Source.remove(this._iconReloadId);
+                    this._iconReloadId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 120, () => {
+                        this._iconReloadId = 0;
+                        try {
+                            const nextIcon = documentTextIcon();
+                            if (!documentTextGicon.get_file().equal(nextIcon.get_file())) {
+                                documentTextGicon = nextIcon;
+                                for (const widgets of this._rowWidgets)
+                                    if (widgets.expandTask)
+                                        widgets.expandTask.child.gicon = nextIcon;
+                            }
+                        } catch (error) {
+                            console.error(`[Overview Todo] Could not reload document icon: ${error}`);
+                        }
+                        return GLib.SOURCE_REMOVE;
+                    });
+                });
+            } catch (error) {
+                console.error(`[Overview Todo] Could not watch document icon: ${error}`);
             }
         }
 
@@ -1098,7 +1159,9 @@
                 let expandTask = null;
                 if (item.type === 'task') {
                     expandTask = new St.Button({
-                        child: new St.Icon({icon_name: 'document-properties-symbolic', icon_size: 16,
+                        child: new St.Icon({
+                            gicon: documentTextGicon,
+                            icon_size: 16,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: item.expanded ? 'Свернуть комментарий' : 'Показать комментарий',

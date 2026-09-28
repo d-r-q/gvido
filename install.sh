@@ -5,7 +5,7 @@ UUID=gvido@local
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 EXTENSIONS_DIR="${OVERVIEW_TODO_EXTENSIONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions}"
 TARGET="$EXTENSIONS_DIR/$UUID"
-SOURCE_FILES=(extension.js metadata.json stylesheet.css)
+SOURCE_FILES=(extension.js metadata.json stylesheet.css document-text-symbolic.svg)
 HOT_RELOAD_FILES=(runtime.js config.json theme.css)
 NEW_PREFS=0
 if [[ -f "$SOURCE_DIR/prefs.js" ]]; then
@@ -15,7 +15,7 @@ if [[ -f "$SOURCE_DIR/prefs.js" && -d "$TARGET" && ! -f "$TARGET/prefs.js" ]]; t
     NEW_PREFS=1
 fi
 
-if [[ ! -f "$SOURCE_DIR/metadata.json" || ! -f "$SOURCE_DIR/extension.js" || ! -f "$SOURCE_DIR/stylesheet.css" ]]; then
+if [[ ! -f "$SOURCE_DIR/metadata.json" || ! -f "$SOURCE_DIR/extension.js" || ! -f "$SOURCE_DIR/stylesheet.css" || ! -f "$SOURCE_DIR/document-text-symbolic.svg" ]]; then
     echo "Missing required extension files in $SOURCE_DIR" >&2
     exit 1
 fi
