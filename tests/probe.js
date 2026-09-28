@@ -956,7 +956,7 @@ export async function run() {
     }
     if (actionRows[2].expandTask.child.icon_name !== 'document-properties-symbolic' ||
         actionRows[1].addSubtask.child.icon_name !== 'list-add-symbolic' ||
-        actionRows[1].remove.child.icon_name !== 'window-close-symbolic' ||
+        actionRows[1].remove.child.icon_name !== 'user-trash-symbolic' ||
         actionRows[0].expandTask.visible || actionRows[1].expandTask.visible)
         throw new Error('Right action icon family or conditional details action differs');
     runtime._selectItem(2, true);

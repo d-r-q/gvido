@@ -1177,7 +1177,7 @@
                     row.add_child(addTaskToHeading);
                 }
 
-                const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16,
+                const removeIcon = new St.Icon({icon_name: 'user-trash-symbolic', icon_size: 16,
                     x_align: Clutter.ActorAlign.CENTER,
                     y_align: Clutter.ActorAlign.CENTER});
                 const remove = new St.Button({
