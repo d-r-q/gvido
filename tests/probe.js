@@ -900,7 +900,7 @@ export async function run() {
             done: false, expanded: true},
         {type: 'task', level: 1, text: 'Проверить код', done: true},
         {type: 'heading', level: 0, text: 'Позже'},
-        {type: 'task', level: 0, text: 'Спланировать неделю', done: false},
+        {type: 'task', level: 0, text: 'Оплатить счета !!', done: false},
     ];
     runtime._renderItems();
     runtime._card.set_size(430, 370);
@@ -908,19 +908,29 @@ export async function run() {
     const screenshotFrame = new St.Widget({
         width: 590,
         height: 530,
+        layout_manager: new Clutter.FixedLayout(),
         style: 'background-color: #ffffff;',
     });
     screenshotFrame.set_position(20, 20);
     Main.layoutManager.addTopChrome(screenshotFrame);
     if (screenshotFrame.get_parent() !== runtime._card.get_parent())
         throw new Error('Screenshot frame and widget have different parents');
-    runtime._resizeHandle.set_position(900, 700);
+    const resizeHandleVisible = runtime._resizeHandle.visible;
+    runtime._resizeHandle.visible = false;
     runtime._card.get_parent().set_child_below_sibling(screenshotFrame, runtime._card);
-    runtime._card.set_position(100, 100);
     runtime._selectItem(1, true);
     await delay(250);
+    const cardParent = runtime._card.get_parent();
+    cardParent.remove_child(runtime._card);
+    screenshotFrame.add_child(runtime._card);
+    runtime._card.set_size(430, 370);
+    runtime._card.set_position(80, 80);
     await screenshot('readme-widget', screenshotFrame);
+    screenshotFrame.remove_child(runtime._card);
+    cardParent.add_child(runtime._card);
     screenshotFrame.destroy();
+    runtime._resizeHandle.visible = resizeHandleVisible;
+    runtime._positionCard();
     runtime._items = [
         {type: 'heading', level: 0, text: 'Сетка задач'},
         {type: 'task', level: 0, text: 'Родитель', done: false},
