@@ -53,9 +53,16 @@ export async function run() {
         runtime._rowWidgets[0].entryText.has_key_focus())
         throw new Error('Opening did not focus the first row without editing');
     runtime._selectItem(1);
-    if (runtime._rowWidgets[1].remove.opacity !== 255 ||
+    runtime._rowWidgets[1].row.hover = false;
+    if (runtime._rowWidgets[1].remove.opacity !== 0 ||
         !runtime._rowWidgets[0].row.hover && runtime._rowWidgets[0].remove.opacity !== 0)
-        throw new Error('Delete button visibility did not follow the selected row');
+        throw new Error('Keyboard selection showed the delete button');
+    runtime._rowWidgets[1].remove.grab_key_focus();
+    if (runtime._rowWidgets[1].remove.opacity !== 255)
+        throw new Error('Focused delete button is hidden');
+    runtime._rowWidgets[1].row.grab_key_focus();
+    if (runtime._rowWidgets[1].remove.opacity !== 0)
+        throw new Error('Delete button stayed visible after focus left it');
     if (runtime._rowWidgets[1].selectionMark.opacity !== 255 ||
         runtime._rowWidgets[0].selectionMark.opacity !== 0)
         throw new Error('Selected row does not have a non-color marker');
@@ -641,8 +648,9 @@ export async function run() {
         runtime._rowWidgets[3].entryText.has_key_focus())
         throw new Error('Delete did not remove the selected task cleanly');
     runtime._selectItem(1, true);
-    if (runtime._rowWidgets[1].remove.opacity !== 255)
-        throw new Error('Delete action is hidden on the selected heading');
+    runtime._rowWidgets[1].row.hover = false;
+    if (runtime._rowWidgets[1].remove.opacity !== 0)
+        throw new Error('Delete action is visible on the keyboard-selected heading');
     runtime._handleRowKey(1, deleteKey);
     await delay(150);
     if (runtime._items.length !== 3 || runtime._items.includes(secondHeading) ||
