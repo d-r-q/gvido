@@ -853,7 +853,9 @@ export async function run() {
     screenshotFrame.destroy();
     Main.overview.hide();
     await delay(900);
-    const focusRuntime = factory({Clutter, Gio, GLib, St, Main, config: {
+    let openedPreferences = 0;
+    const focusRuntime = factory({Clutter, Gio, GLib, St, Main,
+        openPreferences: () => openedPreferences++, config: {
         dataFile: `${output}/focus-todo.md`,
         defaultContent: '# Первый раздел\n- [ ] Первое дело\n',
     }});
@@ -1085,7 +1087,81 @@ export async function run() {
     if (!newRowInViewport())
         throw new Error('New task near the start was not scrolled into view');
     console.log('PROBE PASS: new rows scroll into the viewport from either end');
+
+    const settingsButton = focusRuntime._card.get_children()[0].get_children()
+        .find(child => child.accessible_name === 'Настройки виджета');
+    settingsButton.emit('clicked', 1);
+    if (openedPreferences !== 1 || focusRuntime._card.get_children().length !== 2)
+        throw new Error('Gear did not open the separate preferences window');
+    console.log('PROBE PASS: gear invokes the extension preferences window');
+
+    const newDataPath = `${output}/settings-todo.md`;
+    Gio.File.new_for_path(newDataPath).replace_contents(
+        new TextEncoder().encode('# Новый файл\n- [ ] Дело\n'),
+        null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+    Gio.File.new_for_path(`${output}/config/overview-todo-settings.json`).replace_contents(
+        new TextEncoder().encode(JSON.stringify({dataFile: newDataPath})),
+        null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+    await delay(350);
+    if (focusRuntime._dataPath !== newDataPath ||
+        focusRuntime._items[0]?.text !== 'Новый файл' ||
+        !Gio.File.new_for_path(newDataPath).query_exists(null))
+        throw new Error('External settings did not switch the data file');
+    const savedSettings = JSON.parse(new TextDecoder().decode(
+        Gio.File.new_for_path(`${output}/config/overview-todo-settings.json`).load_contents(null)[1]));
+    if (savedSettings.dataFile !== newDataPath)
+        throw new Error('Data file path did not persist');
+    const restoredRuntime = factory({Clutter, Gio, GLib, St, Main, config: {
+        dataFile: `${output}/focus-todo.md`,
+    }});
+    restoredRuntime._settingsFile = Gio.File.new_for_path(`${output}/config/overview-todo-settings.json`);
+    restoredRuntime._loadSettings();
+    if (restoredRuntime._dataPath !== newDataPath)
+        throw new Error('Saved data file path was not restored');
+    console.log('PROBE PASS: settings file changes switch the data file immediately');
+
+    focusRuntime._sizeOverride = {width: 500, height: 500};
+    focusRuntime._saveSize();
+    focusRuntime._positionCard();
+    focusRuntime._sizeFile.delete(null);
+    await delay(350);
+    if (focusRuntime._sizeOverride ||
+        focusRuntime._sizeFile.query_exists(null) || focusRuntime._card.height >= 360)
+        throw new Error('External reset did not restore compact automatic height');
+    const resetHeight = focusRuntime._card.height;
+    focusRuntime._items.push(...Array.from({length: 12}, (_, i) => ({
+        type: 'task', level: 0, text: `Дополнительная задача ${i}`, done: false,
+    })));
+    focusRuntime._renderItems();
+    await delay(150);
+    if (focusRuntime._card.height <= resetHeight)
+        throw new Error('Automatic height did not grow with the list after reset');
+    console.log('PROBE PASS: reset removes saved size and restores content-driven height');
     focusRuntime.disable();
+
+    const prefsOutput = `${output}/prefs-probe`;
+    GLib.mkdir_with_parents(`${prefsOutput}/config`, 0o700);
+    const launcher = new Gio.SubprocessLauncher({
+        flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
+    });
+    launcher.setenv('GVIDO_TEST_ROOT', root, true);
+    launcher.setenv('GVIDO_TEST_OUTPUT', prefsOutput, true);
+    launcher.setenv('XDG_CONFIG_HOME', `${prefsOutput}/config`, true);
+    launcher.setenv('GI_TYPELIB_PATH', '/usr/lib/gnome-shell/girepository-1.0', true);
+    const prefsProbe = launcher.spawnv(['gjs', '-m', `${root}/tests/prefs-probe.js`]);
+    const [prefsOk, prefsStdout, prefsStderr] = await new Promise((resolve, reject) => {
+        prefsProbe.communicate_utf8_async(null, null, (process, result) => {
+            try {
+                resolve(process.communicate_utf8_finish(result));
+            } catch (error) {
+                reject(error);
+            }
+        });
+    });
+    if (!prefsOk || !prefsProbe.get_successful() ||
+        !prefsStdout.includes('PREFS PROBE COMPLETE'))
+        throw new Error(`Preferences window probe failed: ${prefsStderr}`);
+    console.log('PROBE PASS: separate preferences window saves paths and resets size');
     console.log('PROBE COMPLETE');
     global.context.terminate();
 }

@@ -72,6 +72,8 @@
 .overview-todo-action-secondary:active { background-color: #dedfe5; }
 .overview-todo-action-secondary:focus { border-color: #3584e4; }
 
+.overview-todo-settings-button { padding: 8px; }
+
 .overview-todo-list {
   spacing: 2px;
   padding: 8px 16px 8px 4px;
