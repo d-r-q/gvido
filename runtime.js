@@ -1,4 +1,4 @@
-({Clutter, Gio, GLib, St, Main, config}) => {
+({Clutter, Gio, GLib, St, Main, config, openPreferences}) => {
     const DEFAULTS = {
         dataFile: '~/todo.md',
         defaultContent: '# Сейчас\n- [ ] Первая задача\n  - [ ] Вложенная задача\n\n# Позже\n- [ ] Ещё одна задача\n',
@@ -170,6 +170,10 @@
             this._resize = null;
             this._sizeOverride = null;
             this._sizeFile = null;
+            this._settingsFile = null;
+            this._settingsMonitor = null;
+            this._settingsReloadId = 0;
+            this._dataPath = cfg.dataFile;
             this._list = null;
             this._scroll = null;
             this._dragCaptureId = 0;
@@ -190,10 +194,14 @@
         }
 
         enable() {
-            this._file = Gio.File.new_for_path(expandHome(cfg.dataFile));
+            this._settingsFile = Gio.File.new_for_path(GLib.build_filenamev([
+                GLib.get_user_config_dir(), 'overview-todo-settings.json']));
+            this._loadSettings();
+            this._file = Gio.File.new_for_path(expandHome(this._dataPath));
             this._sizeFile = Gio.File.new_for_path(GLib.build_filenamev([
                 GLib.get_user_config_dir(), 'overview-todo-size.json']));
             this._loadSize();
+            this._watchSettings();
             this._items = [];
             this._rowWidgets = [];
             this._selectedIndex = -1;
@@ -245,6 +253,12 @@
             this._hideActionTooltip();
             this._cancelDrag();
             this._cancelResize();
+            this._settingsMonitor?.cancel();
+            this._settingsMonitor = null;
+            if (this._settingsReloadId) {
+                GLib.Source.remove(this._settingsReloadId);
+                this._settingsReloadId = 0;
+            }
 
             if (this._saveSourceId) {
                 GLib.Source.remove(this._saveSourceId);
@@ -287,6 +301,7 @@
             this._undoBar = null;
             this._undoMessage = null;
             this._sizeFile = null;
+            this._settingsFile = null;
             this._list = null;
             this._scroll = null;
             this._dragCaptureId = 0;
@@ -312,7 +327,7 @@
                     return;
                 this._items = parseTodo(new TextDecoder().decode(bytes));
             } catch (error) {
-                console.error(`[Overview Todo] Could not read ${cfg.dataFile}: ${error}`);
+                console.error(`[Overview Todo] Could not read ${this._dataPath}: ${error}`);
             }
         }
 
@@ -326,7 +341,7 @@
                     null
                 );
             } catch (error) {
-                console.error(`[Overview Todo] Could not write ${cfg.dataFile}: ${error}`);
+                console.error(`[Overview Todo] Could not write ${this._dataPath}: ${error}`);
             }
         }
 
@@ -356,6 +371,69 @@
         _saveNow() {
             if (this._file)
                 this._writeText(serializeTodo(this._items));
+        }
+
+        _loadSettings() {
+            this._dataPath = cfg.dataFile;
+            try {
+                const [ok, bytes] = this._settingsFile.load_contents(null);
+                if (!ok)
+                    return;
+                const {dataFile} = JSON.parse(new TextDecoder().decode(bytes));
+                if (typeof dataFile === 'string' && dataFile.trim() &&
+                    GLib.path_is_absolute(expandHome(dataFile)))
+                    this._dataPath = dataFile;
+            } catch (error) {
+                if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                    console.error(`[Overview Todo] Could not read settings: ${error}`);
+            }
+        }
+
+        _watchSettings() {
+            try {
+                const directory = Gio.File.new_for_path(GLib.get_user_config_dir());
+                this._settingsMonitor = directory.monitor_directory(
+                    Gio.FileMonitorFlags.WATCH_MOVES, null);
+                this._settingsMonitor.connect('changed', (_monitor, file, otherFile) => {
+                    const names = [file, otherFile].filter(Boolean)
+                        .map(item => item.get_basename());
+                    if (!names.some(name => name === 'overview-todo-settings.json' ||
+                        name === 'overview-todo-size.json'))
+                        return;
+                    if (this._settingsReloadId)
+                        GLib.Source.remove(this._settingsReloadId);
+                    this._settingsReloadId = GLib.timeout_add(
+                        GLib.PRIORITY_DEFAULT, 120, () => {
+                            this._settingsReloadId = 0;
+                            this._applyExternalSettings();
+                            return GLib.SOURCE_REMOVE;
+                        });
+                });
+            } catch (error) {
+                console.error(`[Overview Todo] Could not watch settings: ${error}`);
+            }
+        }
+
+        _applyExternalSettings() {
+            const previousPath = this._dataPath;
+            this._loadSettings();
+            if (this._dataPath !== previousPath) {
+                const nextFile = Gio.File.new_for_path(expandHome(this._dataPath));
+                try {
+                    nextFile.load_contents(null);
+                    this._flushSave();
+                    this._file = nextFile;
+                    this._items = [];
+                    this._selectedIndex = -1;
+                    this._loadItems();
+                    this._renderItems();
+                } catch (error) {
+                    console.error(`[Overview Todo] Could not switch to ${this._dataPath}: ${error}`);
+                    this._dataPath = previousPath;
+                }
+            }
+            this._loadSize();
+            this._positionCard();
         }
 
         _loadSize() {
@@ -423,9 +501,34 @@
             });
             addHeading.connect('clicked', () => this._addItem('heading'));
 
+            const settingsButton = new St.Button({
+                child: new St.Icon({icon_name: 'preferences-system-symbolic', icon_size: 16}),
+                accessible_name: 'Настройки виджета',
+                can_focus: true,
+                style_class: 'overview-todo-action overview-todo-settings-button',
+            });
+            settingsButton.connect('clicked', () => {
+                if (openPreferences) {
+                    openPreferences();
+                    return;
+                }
+                // Shell caches hasPrefs when it discovers an extension. A newly
+                // installed prefs.js can still be opened before the next login.
+                Gio.DBus.session.call(
+                    'org.gnome.Shell.Extensions',
+                    '/org/gnome/Shell/Extensions',
+                    'org.gnome.Shell.Extensions',
+                    'OpenExtensionPrefs',
+                    new GLib.Variant('(ssa{sv})', ['gvido@local', '', {}]),
+                    null, Gio.DBusCallFlags.NONE, -1, null
+                ).catch(error => console.error(`[Overview Todo] Could not open preferences: ${error}`));
+                Main.overview.hide();
+            });
+
             header.add_child(title);
             header.add_child(addTask);
             header.add_child(addHeading);
+            header.add_child(settingsButton);
 
             this._scroll = new St.ScrollView({
                 x_expand: true,

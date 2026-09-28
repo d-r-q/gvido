@@ -5,10 +5,14 @@ UUID=gvido@local
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 EXTENSIONS_DIR="${OVERVIEW_TODO_EXTENSIONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions}"
 TARGET="$EXTENSIONS_DIR/$UUID"
-SOURCE_FILES=(extension.js metadata.json stylesheet.css)
+SOURCE_FILES=(extension.js metadata.json stylesheet.css prefs.js)
 HOT_RELOAD_FILES=(runtime.js config.json theme.css)
+NEW_PREFS=0
+if [[ -d "$TARGET" && ! -f "$TARGET/prefs.js" ]]; then
+    NEW_PREFS=1
+fi
 
-if [[ ! -f "$SOURCE_DIR/metadata.json" || ! -f "$SOURCE_DIR/extension.js" || ! -f "$SOURCE_DIR/stylesheet.css" ]]; then
+if [[ ! -f "$SOURCE_DIR/metadata.json" || ! -f "$SOURCE_DIR/extension.js" || ! -f "$SOURCE_DIR/stylesheet.css" || ! -f "$SOURCE_DIR/prefs.js" ]]; then
     echo "Missing required extension files in $SOURCE_DIR" >&2
     exit 1
 fi
@@ -32,6 +36,9 @@ for file in "${HOT_RELOAD_FILES[@]}"; do
 done
 
 echo "Installed to $TARGET"
+if [[ "$NEW_PREFS" == 1 ]]; then
+    echo 'GNOME Shell обнаружит новую кнопку настроек в приложении «Расширения» после выхода из сеанса и повторного входа.'
+fi
 
 # A Wayland GNOME Shell discovers extension directories at session start.  Put
 # the UUID into its persistent enabled list now; the next login will load it
