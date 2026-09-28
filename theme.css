@@ -216,6 +216,7 @@
 .overview-todo-drag-handle {
   color: #d3d5db;
 }
+.overview-todo-comment-toggle,
 .overview-todo-add-subtask,
 .overview-todo-add-to-heading,
 .overview-todo-delete { color: #9ba0a8; }
@@ -238,8 +239,8 @@
   font-size: 0.8em;
 }
 .overview-todo-delete:hover {
-  color: #c01c28;
-  background-color: #fbe9eb;
+  color: #2e3436;
+  background-color: #e9e9ee;
 }
 
 .overview-todo-drop-before { border-top: 2px solid #3584e4; }

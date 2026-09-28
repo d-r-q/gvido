@@ -669,7 +669,7 @@ export async function run() {
         combinedActors.indexOf(combinedRow.expandTask.get_parent()) &&
         combinedActors.indexOf(combinedRow.expandTask.get_parent()) <
         combinedActors.indexOf(combinedRow.addSubtask)) ||
-        combinedRow.expandTask.child.icon_name !== 'text-x-generic-symbolic' ||
+        combinedRow.expandTask.child.icon_name !== 'document-properties-symbolic' ||
         combinedRow.expandChildren.child.icon_name !== 'pan-down-symbolic' ||
         combinedRow.addSubtask.child.icon_name !== 'list-add-symbolic')
         throw new Error('Task, comment, and add-subtask actions are not correctly placed');
@@ -931,6 +931,50 @@ export async function run() {
         nestedRows[2].addSubtask.has_style_class_name('overview-todo-row-emphasis'))
         throw new Error('Keyboard selection did not emphasize only the active row');
     console.log('PROBE PASS: hover and keyboard focus emphasize secondary actions');
+    runtime._items = [
+        {type: 'task', level: 0, text: 'Только добавить', done: false},
+        {type: 'task', level: 0, text: 'Добавить и удалить', done: false},
+        {type: 'task', level: 0, text: 'Задача с комментарием\nДетали задачи', done: false},
+    ];
+    runtime._renderItems();
+    runtime._card.set_size(430, 260);
+    await delay(200);
+    const actionRows = runtime._rowWidgets;
+    for (const widgets of actionRows) {
+        const actions = [widgets.expandTask, widgets.addSubtask, widgets.remove]
+            .filter(button => button?.visible);
+        for (const button of actions) {
+            const [width, height] = button.get_transformed_size();
+            const [iconWidth, iconHeight] = button.child.get_transformed_size();
+            const [x, y] = button.get_transformed_position();
+            const [iconX, iconY] = button.child.get_transformed_position();
+            if (width !== 24 || height !== 24 || iconWidth !== 16 || iconHeight !== 16 ||
+                Math.abs(iconX + 8 - x - 12) > 1 ||
+                Math.abs(iconY + 8 - y - 12) > 1)
+                throw new Error(`Right action geometry differs: ${button.style_class}`);
+        }
+    }
+    if (actionRows[2].expandTask.child.icon_name !== 'document-properties-symbolic' ||
+        actionRows[1].addSubtask.child.icon_name !== 'list-add-symbolic' ||
+        actionRows[1].remove.child.icon_name !== 'window-close-symbolic' ||
+        actionRows[0].expandTask.visible || actionRows[1].expandTask.visible)
+        throw new Error('Right action icon family or conditional details action differs');
+    runtime._selectItem(2, true);
+    await delay(200);
+    await screenshot('right-actions-add-only', runtime._card);
+    runtime._selectItem(1, true);
+    await delay(200);
+    await screenshot('right-actions-add-remove', runtime._card);
+    runtime._selectItem(2, true);
+    await delay(200);
+    await screenshot('right-actions-details-add-remove', runtime._card);
+    runtime._rowWidgets[0].row.hover = true;
+    await delay(200);
+    if (!actionRows[0].addSubtask.has_style_class_name('overview-todo-row-emphasis') ||
+        !actionRows[2].expandTask.has_style_class_name('overview-todo-row-emphasis'))
+        throw new Error('Hover or keyboard selection does not emphasize all right actions');
+    await screenshot('right-actions-hover-focus', runtime._card);
+    runtime._rowWidgets[0].row.hover = false;
     runtime.disable();
     Main.overview.hide();
     await delay(900);

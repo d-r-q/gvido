@@ -1098,7 +1098,7 @@
                 let expandTask = null;
                 if (item.type === 'task') {
                     expandTask = new St.Button({
-                        child: new St.Icon({icon_name: 'text-x-generic-symbolic', icon_size: 16,
+                        child: new St.Icon({icon_name: 'document-properties-symbolic', icon_size: 16,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: item.expanded ? 'Свернуть комментарий' : 'Показать комментарий',
@@ -1138,7 +1138,7 @@
                 if (item.type === 'task' && item.level <
                     Math.max(0, Number(cfg.behavior.maxLevel) || 5)) {
                     addSubtask = new St.Button({
-                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 14,
+                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: 'Добавить подзадачу',
@@ -1162,7 +1162,7 @@
                 let addTaskToHeading = null;
                 if (item.type === 'heading') {
                     addTaskToHeading = new St.Button({
-                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 14,
+                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: 'Добавить задачу в список',
@@ -1177,7 +1177,7 @@
                     row.add_child(addTaskToHeading);
                 }
 
-                const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 20,
+                const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16,
                     x_align: Clutter.ActorAlign.CENTER,
                     y_align: Clutter.ActorAlign.CENTER});
                 const remove = new St.Button({
@@ -1504,7 +1504,7 @@
             if (!widgets)
                 return;
             const emphasized = widgets.row.hover || index === this._selectedIndex;
-            for (const actor of [widgets.dragHandle, widgets.addSubtask,
+            for (const actor of [widgets.dragHandle, widgets.expandTask, widgets.addSubtask,
                 widgets.addTaskToHeading, widgets.remove]) {
                 if (!actor)
                     continue;
