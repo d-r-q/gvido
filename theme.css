@@ -86,11 +86,23 @@
   border-radius: 8px;
   transition-duration: 120ms;
 }
-.overview-todo-row.priority { background-color: rgba(229, 165, 10, 0.10); }
+.overview-todo-row:hover { background-color: #f5f5f7; }
+.overview-todo-row.selected,
+.overview-todo-row.selected:hover { background-color: #f0f6ff; }
+.overview-todo-row.priority,
+.overview-todo-row.priority:hover,
+.overview-todo-row.priority.selected,
+.overview-todo-row.priority.selected:hover {
+  background-color: rgba(229, 165, 10, 0.10);
+}
+.overview-todo-selection-slot {
+  width: 8px;
+  height: 24px;
+  margin-top: 6px;
+}
 .overview-todo-selection-mark {
   width: 2px;
-  height: 22px;
-  margin-top: 7px;
+  height: 24px;
   background-color: #3584e4;
   border-radius: 2px;
 }
@@ -145,9 +157,9 @@
 .overview-todo-heading.heading-6 { font-size: 0.95em; }
 
 .overview-todo-check-hit {
-  width: 28px;
-  height: 28px;
-  margin-top: 3px;
+  width: 22px;
+  height: 22px;
+  margin-top: 6px;
   margin-right: 0;
   padding: 0;
   background-color: transparent;
@@ -160,8 +172,8 @@
 .overview-todo-check-indicator {
   min-width: 0;
   min-height: 0;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   color: #ffffff;
   background-color: #ffffff;
   border: 1px solid #b6b9c0;
@@ -179,9 +191,9 @@
 .overview-todo-add-to-heading,
 .overview-todo-delete,
 .overview-todo-drag-handle {
-  width: 28px;
-  height: 32px;
-  margin-top: 1px;
+  width: 22px;
+  height: 22px;
+  margin-top: 6px;
   padding: 0;
   color: #8c9099;
   background-color: transparent;
@@ -192,13 +204,14 @@
 .overview-todo-children-slot,
 .overview-todo-comment-slot,
 .overview-todo-add-subtask-slot {
-  width: 28px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
 }
 .overview-todo-children-slot,
-.overview-todo-comment-slot { margin-top: 2px; }
+.overview-todo-comment-slot,
+.overview-todo-add-subtask-slot { margin-top: 6px; }
+.overview-todo-comment-slot .overview-todo-expand { margin-top: 0; }
 .overview-todo-drag-handle {
-  width: 24px;
   color: #d3d5db;
 }
 .overview-todo-expand:hover,

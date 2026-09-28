@@ -737,11 +737,15 @@
                 if (index === this._selectedIndex)
                     row.add_style_class_name('selected');
                 const selectionMark = new St.Widget({
-                    y_align: Clutter.ActorAlign.START,
                     opacity: index === this._selectedIndex ? 255 : 0,
                     style_class: 'overview-todo-selection-mark',
                 });
-                row.add_child(selectionMark);
+                row.add_child(new St.Bin({
+                    child: selectionMark,
+                    y_align: Clutter.ActorAlign.START,
+                    x_align: Clutter.ActorAlign.CENTER,
+                    style_class: 'overview-todo-selection-slot',
+                }));
                 row.connect('notify::hover', () => this._updateDeleteVisibility(index));
                 row.connect('key-focus-in', () => this._selectItem(index));
                 row.connect('key-press-event', (_actor, event) =>
@@ -854,8 +858,7 @@
                     });
                 }
                 if (item.type === 'task') {
-                    row.add_child(new St.Bin({
-                        child: expandChildren,
+                    row.add_child(expandChildren || new St.Bin({
                         y_align: Clutter.ActorAlign.START,
                         style_class: 'overview-todo-children-slot',
                     }));
@@ -865,7 +868,7 @@
                 if (item.type === 'task') {
                     const checkIcon = new St.Icon({
                         icon_name: 'object-select-symbolic',
-                        icon_size: 8,
+                        icon_size: 10,
                         opacity: item.done ? 255 : 0,
                     });
                     const checkIndicator = new St.Bin({

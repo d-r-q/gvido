@@ -103,15 +103,15 @@ export async function run() {
             const [width, height] = button.get_transformed_size();
             const [iconX, iconY] = button.child.get_transformed_position();
             const [iconWidth, iconHeight] = button.child.get_transformed_size();
-            if (width < 28 || height < 32)
-                throw new Error(`Action hit area is too small: ${button.style_class}`);
+            if (width !== 24 || height !== 24)
+                throw new Error(`Action slot is not 24×24: ${button.style_class} ${width}×${height}`);
             console.log(`ACTION row=${i} class=${button.style_class} buttonCenter=${x + width / 2},${y + height / 2} iconCenter=${iconX + iconWidth / 2},${iconY + iconHeight / 2}`);
         }
     }
     const [handleWidth, handleHeight] = runtime._rowWidgets[0].dragHandle.get_transformed_size();
-    if (handleWidth < 24 || handleHeight < 32)
-        throw new Error('Drag handle hit area is too small');
-    console.log('PROBE PASS: action hit areas exceed symbolic icon sizes');
+    if (handleWidth !== 24 || handleHeight !== 24)
+        throw new Error('Drag handle slot is not 24×24');
+    console.log('PROBE PASS: action slots are 24×24');
     const checkboxRow = runtime._rowWidgets[1];
     checkboxRow.checkbox.emit('clicked', 1);
     if (!runtime._items[1].done || runtime._rowWidgets[1] !== checkboxRow ||
@@ -203,11 +203,12 @@ export async function run() {
     const visibleTitleLines = expandedRow.previewTitle.clutter_text.get_layout().get_line_count();
     const firstLineCenter = expandedRow.previewTitle.get_transformed_position()[1] +
         expandedRow.previewTitle.height / visibleTitleLines / 2;
-    for (const actor of [expandedRow.selectionMark, expandedRow.dragHandle.child,
-        expandedRow.checkbox.child, expandedRow.expandTask.child,
-        expandedRow.addSubtask.child, expandedRow.remove.child]) {
+    for (const [label, actor] of Object.entries({mark: expandedRow.selectionMark,
+        drag: expandedRow.dragHandle.child, check: expandedRow.checkbox.child,
+        comment: expandedRow.expandTask.child, add: expandedRow.addSubtask.child,
+        remove: expandedRow.remove.child})) {
         if (Math.abs(centerY(actor) - firstLineCenter) > 1)
-            throw new Error('Row control is not aligned with the first title line');
+            throw new Error(`Row control is not aligned with the first title line: ${label} ${centerY(actor)} vs ${firstLineCenter}`);
     }
     const rowBottom = expandedRow.row.get_transformed_position()[1] + expandedRow.row.height;
     const previewBottom = expandedRow.preview.get_transformed_position()[1] +
