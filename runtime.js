@@ -4,8 +4,8 @@
         defaultContent: '# Сейчас\n- [ ] Первая задача\n  - [ ] Вложенная задача\n\n# Позже\n- [ ] Ещё одна задача\n',
         ui: {
             title: 'Задачи',
-            addTaskLabel: '+ Задача',
-            addHeadingLabel: '+ Список',
+            addTaskLabel: 'Задача',
+            addHeadingLabel: 'Список',
             addTaskToHeadingLabel: '+',
             newTaskText: 'Новая задача',
             newHeadingText: 'Новый список',
@@ -25,7 +25,7 @@
             margin: 24,
             panelGap: 24,
             widthFraction: 0.30,
-            widthMin: 330,
+            widthMin: 360,
             widthMax: 430,
             heightFraction: 0.64,
             heightMin: 360,
@@ -546,8 +546,32 @@
                 style_class: 'overview-todo-title',
             });
 
+            const actions = new St.BoxLayout({
+                orientation: Clutter.Orientation.HORIZONTAL,
+                y_align: Clutter.ActorAlign.CENTER,
+                style_class: 'overview-todo-toolbar-actions',
+            });
+
+            const addActionContent = label => {
+                const content = new St.BoxLayout({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    style_class: 'overview-todo-action-content',
+                });
+                content.add_child(new St.Icon({
+                    icon_name: 'list-add-symbolic',
+                    icon_size: 16,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }));
+                content.add_child(new St.Label({
+                    text: label.replace(/^\+\s*/, ''),
+                    x_expand: true,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }));
+                return content;
+            };
+
             const addTask = new St.Button({
-                label: cfg.ui.addTaskLabel,
+                child: addActionContent(cfg.ui.addTaskLabel),
                 accessible_name: 'Добавить задачу',
                 can_focus: true,
                 style_class: 'overview-todo-action overview-todo-action-primary',
@@ -555,7 +579,7 @@
             addTask.connect('clicked', () => this._addItem('task'));
 
             const addHeading = new St.Button({
-                label: cfg.ui.addHeadingLabel,
+                child: addActionContent(cfg.ui.addHeadingLabel),
                 accessible_name: 'Добавить список',
                 can_focus: true,
                 style_class: 'overview-todo-action overview-todo-action-secondary',
@@ -587,9 +611,10 @@
             });
 
             header.add_child(title);
-            header.add_child(addTask);
-            header.add_child(addHeading);
-            header.add_child(settingsButton);
+            actions.add_child(addTask);
+            actions.add_child(addHeading);
+            actions.add_child(settingsButton);
+            header.add_child(actions);
 
             this._scroll = new St.ScrollView({
                 x_expand: true,

@@ -98,6 +98,41 @@ export async function run() {
         if (!button.accessible_name?.trim())
             throw new Error(`Button has no accessible name: ${button.style_class}`);
     }
+    const toolbar = runtime._card.get_children()[0];
+    const toolbarActions = toolbar.get_children()[1].get_children();
+    const boxes = toolbarActions.map(button => {
+        const [x, y] = button.get_transformed_position();
+        const [width, height] = button.get_transformed_size();
+        return {x, y, width, height};
+    });
+    if (boxes.length !== 3 || boxes.some(box => Math.abs(box.height - 36) > 1) ||
+        Math.abs(boxes[2].width - 36) > 1 ||
+        boxes.some(box => Math.abs(box.y - boxes[0].y) > 1) ||
+        boxes.slice(1).some((box, i) =>
+            Math.abs(box.x - boxes[i].x - boxes[i].width - 7) > 1))
+        throw new Error(`Toolbar button geometry differs: ${JSON.stringify(boxes)}`);
+    const [taskButton, listButton, gearButton] = toolbarActions;
+    const taskContent = taskButton.child.get_children();
+    const listContent = listButton.child.get_children();
+    if (taskContent[0].icon_name !== 'list-add-symbolic' ||
+        listContent[0].icon_name !== taskContent[0].icon_name ||
+        taskContent[1].text !== 'Задача' || listContent[1].text !== 'Список' ||
+        gearButton.child.icon_size !== 16)
+        throw new Error('Toolbar icons or labels differ');
+    await screenshot('toolbar', runtime._card);
+    listButton.hover = true;
+    await delay(100);
+    await screenshot('toolbar-hover', runtime._card);
+    listButton.hover = false;
+    listButton.add_style_pseudo_class('active');
+    await delay(100);
+    await screenshot('toolbar-pressed', runtime._card);
+    listButton.remove_style_pseudo_class('active');
+    gearButton.grab_key_focus();
+    await delay(100);
+    await screenshot('toolbar-focus', runtime._card);
+    runtime._rowWidgets[1].row.grab_key_focus();
+    console.log('PROBE PASS: toolbar buttons share 36px height and 7px gaps');
     if (runtime._rowWidgets[0].remove.accessible_name !== 'Удалить список «Сегодня»' ||
         runtime._rowWidgets[1].remove.accessible_name !== 'Удалить задачу «Подготовить релиз»')
         throw new Error('Delete names do not distinguish tasks from lists');
@@ -1260,7 +1295,7 @@ export async function run() {
         throw new Error('New task near the start was not scrolled into view');
     console.log('PROBE PASS: new rows scroll into the viewport from either end');
 
-    const settingsButton = focusRuntime._card.get_children()[0].get_children()
+    const settingsButton = buttonsIn(focusRuntime._card)
         .find(child => child.accessible_name === 'Настройки виджета');
     settingsButton.emit('clicked', 1);
     if (openedPreferences !== 1 || focusRuntime._card.get_children().length !== 2)
