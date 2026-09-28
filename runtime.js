@@ -1131,7 +1131,7 @@
                 if (item.type === 'task' && item.level <
                     Math.max(0, Number(cfg.behavior.maxLevel) || 5)) {
                     addSubtask = new St.Button({
-                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
+                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 14,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: 'Добавить подзадачу',
@@ -1153,7 +1153,7 @@
 
                 if (item.type === 'heading') {
                     const addTaskToHeading = new St.Button({
-                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 16,
+                        child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 14,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: 'Добавить задачу в список',
@@ -1167,7 +1167,7 @@
                     row.add_child(addTaskToHeading);
                 }
 
-                const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 16,
+                const removeIcon = new St.Icon({icon_name: 'window-close-symbolic', icon_size: 20,
                     x_align: Clutter.ActorAlign.CENTER,
                     y_align: Clutter.ActorAlign.CENTER});
                 const remove = new St.Button({

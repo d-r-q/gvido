@@ -225,6 +225,15 @@ export async function run() {
             expandedRow.remove.get_transformed_position()[0]) > 1 ||
         Math.abs(centerY(taskPlus) - centerY(expandedRow.remove)) > 1)
         throw new Error('Add and delete buttons do not keep their action columns');
+    const [plusX, plusWidth] = [taskPlus.get_transformed_position()[0], taskPlus.width];
+    const [removeX, removeWidth] = [expandedRow.remove.get_transformed_position()[0],
+        expandedRow.remove.width];
+    const [rowX, rowWidth] = [expandedRow.row.get_transformed_position()[0],
+        expandedRow.row.width];
+    if (plusWidth !== 24 || removeWidth !== 24 ||
+        Math.abs(removeX - plusX - plusWidth - 6) > 1 ||
+        Math.abs(rowX + rowWidth - removeX - removeWidth - 6) > 1)
+        throw new Error('Right actions do not have equal slots, a 6px gap and 6px edge');
     const headingPlusWidth = headingPlus.width;
     runtime._showActionTooltip(headingPlus);
     if (runtime._actionTooltip.text !== 'Добавить задачу в список' ||

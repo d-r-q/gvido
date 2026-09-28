@@ -81,6 +81,7 @@
 
 .overview-todo-row {
   spacing: 4px;
+  padding-right: 6px;
   min-height: 38px;
   margin-right: 6px;
   border-radius: 8px;
@@ -235,6 +236,7 @@
   color: #c01c28;
   background-color: #fbe9eb;
 }
+.overview-todo-delete { margin-left: 2px; }
 
 .overview-todo-drop-before { border-top: 2px solid #3584e4; }
 .overview-todo-drop-after { border-bottom: 2px solid #3584e4; }
