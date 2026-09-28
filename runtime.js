@@ -1872,11 +1872,19 @@
             return `overview-todo-entry overview-todo-task${item.done ? ' completed' : ''}`;
         }
 
+        _isPriorityTask(item) {
+            return item.type === 'task' && item.text.split(/\r?\n/, 1)[0].includes('!!');
+        }
+
         _updateRowAppearance(index) {
             const item = this._items[index];
             const widgets = this._rowWidgets[index];
             if (!item || !widgets)
                 return;
+            if (this._isPriorityTask(item))
+                widgets.row.add_style_class_name('priority');
+            else
+                widgets.row.remove_style_class_name('priority');
             widgets.entry.set_style_class_name(this._entryClass(item));
             const itemName = item.text.split(/\r?\n/, 1)[0].trim() || 'Без названия';
             widgets.remove.accessible_name = item.type === 'heading'
