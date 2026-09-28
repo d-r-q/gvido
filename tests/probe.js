@@ -58,6 +58,23 @@ export async function run() {
     if (runtime._rowWidgets[1].selectionMark.opacity !== 255 ||
         runtime._rowWidgets[0].selectionMark.opacity !== 0)
         throw new Error('Selected row does not have a non-color marker');
+    const priorityEditor = runtime._rowWidgets[1].entryText;
+    priorityEditor.set_text('!! Подготовить релиз');
+    if (!runtime._rowWidgets[1].row.has_style_class_name('priority'))
+        throw new Error('Priority marker at the start of a title was not detected');
+    priorityEditor.set_text('Подготовить !! релиз');
+    if (!runtime._rowWidgets[1].row.has_style_class_name('priority'))
+        throw new Error('Priority marker in the middle of a title was not detected');
+    priorityEditor.set_text('Подготовить релиз !!');
+    if (!runtime._rowWidgets[1].row.has_style_class_name('priority'))
+        throw new Error('Priority marker at the end of a title was not detected');
+    priorityEditor.set_text('Подготовить релиз\nКомментарий с !!');
+    if (runtime._rowWidgets[1].row.has_style_class_name('priority'))
+        throw new Error('Priority marker in a comment changed the task priority');
+    priorityEditor.set_text('Подготовить релиз');
+    if (runtime._rowWidgets[1].row.has_style_class_name('priority'))
+        throw new Error('Removing the priority marker did not restore the normal row');
+    console.log('PROBE PASS: priority follows !! anywhere in the task title');
     runtime._card.grab_key_focus();
     runtime._focusSelection();
     if (runtime._selectedIndex !== 1 || !runtime._rowWidgets[1].row.has_key_focus() ||
