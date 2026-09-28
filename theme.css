@@ -80,7 +80,7 @@
 }
 
 .overview-todo-row {
-  spacing: 4px;
+  spacing: 6px;
   padding-right: 6px;
   min-height: 38px;
   margin-right: 6px;
@@ -163,7 +163,6 @@
 .overview-todo-check-hit {
   width: 22px;
   height: 22px;
-  margin-top: 6px;
   margin-right: 0;
   padding: 0;
   background-color: transparent;
@@ -197,7 +196,6 @@
 .overview-todo-drag-handle {
   width: 22px;
   height: 22px;
-  margin-top: 6px;
   padding: 0;
   color: #8c9099;
   background-color: transparent;
@@ -218,6 +216,10 @@
 .overview-todo-drag-handle {
   color: #d3d5db;
 }
+.overview-todo-add-subtask,
+.overview-todo-add-to-heading,
+.overview-todo-delete { color: #9ba0a8; }
+.overview-todo-row-emphasis { color: #5e626a; }
 .overview-todo-expand:hover,
 .overview-todo-add-to-heading:hover,
 .overview-todo-drag-handle:hover {
@@ -239,7 +241,6 @@
   color: #c01c28;
   background-color: #fbe9eb;
 }
-.overview-todo-delete { margin-left: 2px; }
 
 .overview-todo-drop-before { border-top: 2px solid #3584e4; }
 .overview-todo-drop-after { border-bottom: 2px solid #3584e4; }

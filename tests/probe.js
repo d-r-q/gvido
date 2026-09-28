@@ -915,6 +915,22 @@ export async function run() {
         throw new Error('Missing add action did not reserve its column');
     await screenshot('nested-grid', runtime._card);
     console.log('PROBE PASS: levels 0–5 keep the control grid and absent add slot');
+    const hoveredRow = nestedRows[1].row;
+    hoveredRow.hover = true;
+    await delay(200);
+    if (!hoveredRow.hover || nestedRows[1].remove.opacity !== 255 ||
+        !nestedRows[1].dragHandle.has_style_class_name('overview-todo-row-emphasis') ||
+        !nestedRows[1].addSubtask.has_style_class_name('overview-todo-row-emphasis') ||
+        !nestedRows[1].remove.has_style_class_name('overview-todo-row-emphasis'))
+        throw new Error('Hover did not emphasize row actions');
+    await screenshot('nested-hover', runtime._card);
+    hoveredRow.hover = false;
+    runtime._selectItem(2, true);
+    if (!nestedRows[1].row.has_key_focus() ||
+        !nestedRows[1].addSubtask.has_style_class_name('overview-todo-row-emphasis') ||
+        nestedRows[2].addSubtask.has_style_class_name('overview-todo-row-emphasis'))
+        throw new Error('Keyboard selection did not emphasize only the active row');
+    console.log('PROBE PASS: hover and keyboard focus emphasize secondary actions');
     runtime.disable();
     Main.overview.hide();
     await delay(900);

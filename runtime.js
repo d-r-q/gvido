@@ -746,7 +746,10 @@
                     x_align: Clutter.ActorAlign.CENTER,
                     style_class: 'overview-todo-selection-slot',
                 }));
-                row.connect('notify::hover', () => this._updateDeleteVisibility(index));
+                row.connect('notify::hover', () => {
+                    this._updateDeleteVisibility(index);
+                    this._updateRowActionStyles(index);
+                });
                 row.connect('key-focus-in', () => this._selectItem(index));
                 row.connect('key-press-event', (_actor, event) =>
                     entryText.has_key_focus()
@@ -770,6 +773,7 @@
                     can_focus: true,
                     reactive: true,
                     y_align: Clutter.ActorAlign.START,
+                    translation_y: 6,
                     style_class: 'overview-todo-drag-handle',
                 });
                 dragHandle.connect('key-focus-in', () => this._selectItem(index));
@@ -804,6 +808,7 @@
                         accessible_name: item.listCollapsed ? 'Показать список' : 'Свернуть список',
                         can_focus: true,
                         y_align: Clutter.ActorAlign.START,
+                        translation_y: 6,
                         style_class: 'overview-todo-expand overview-todo-list-toggle',
                     });
                     expandList.connect('key-focus-in', () => this._selectItem(index));
@@ -840,6 +845,7 @@
                             ? 'Показать подзадачи' : 'Свернуть подзадачи',
                         can_focus: true,
                         y_align: Clutter.ActorAlign.START,
+                        translation_y: 6,
                         style_class: 'overview-todo-expand overview-todo-children-toggle',
                     });
                     expandChildren.connect('key-focus-in', () => this._selectItem(index));
@@ -880,6 +886,7 @@
                         accessible_name: item.done ? 'Отметить невыполненной' : 'Отметить выполненной',
                         can_focus: true,
                         y_align: Clutter.ActorAlign.START,
+                        translation_y: 6,
                         style_class: 'overview-todo-check-hit',
                     });
                     checkbox.connect('key-focus-in', () => this._selectItem(index));
@@ -1137,6 +1144,7 @@
                         accessible_name: 'Добавить подзадачу',
                         can_focus: true,
                         y_align: Clutter.ActorAlign.START,
+                        translation_y: 6,
                         style_class: 'overview-todo-expand overview-todo-add-subtask',
                     });
                     addSubtask.connect('key-focus-in', () => this._selectItem(index));
@@ -1151,14 +1159,16 @@
                     }));
                 }
 
+                let addTaskToHeading = null;
                 if (item.type === 'heading') {
-                    const addTaskToHeading = new St.Button({
+                    addTaskToHeading = new St.Button({
                         child: new St.Icon({icon_name: 'list-add-symbolic', icon_size: 14,
                             x_align: Clutter.ActorAlign.CENTER,
                             y_align: Clutter.ActorAlign.CENTER}),
                         accessible_name: 'Добавить задачу в список',
                         can_focus: true,
                         y_align: Clutter.ActorAlign.START,
+                        translation_y: 6,
                         style_class: 'overview-todo-add-to-heading',
                     });
                     this._bindActionTooltip(addTaskToHeading);
@@ -1175,6 +1185,7 @@
                     accessible_name: 'Удалить',
                     can_focus: true,
                     y_align: Clutter.ActorAlign.START,
+                    translation_y: 6,
                     style_class: 'overview-todo-delete',
                 });
                 remove.connect('key-focus-in', () => {
@@ -1188,12 +1199,13 @@
                 this._list.add_child(row);
                 this._rowWidgets[index] = {row, selectionMark, entry, entryText, checkbox, dragHandle,
                     expandTask, expandChildren, expandList, preview, previewTitle, previewComment,
-                    addSubtask, remove, setEditing};
+                    addSubtask, addTaskToHeading, remove, setEditing};
                 entry.connect('notify::height', () => this._updateRowHeight(index));
                 previewTitle?.connect('notify::height', () => this._updateRowHeight(index));
                 previewComment?.connect('notify::height', () => this._updateRowHeight(index));
                 this._updateRowAppearance(index);
                 this._updateDeleteVisibility(index);
+                this._updateRowActionStyles(index);
             });
             this._updateFoldVisibility();
             this._positionCard();
@@ -1466,11 +1478,13 @@
                 previousMark.opacity = 0;
             this._selectedIndex = index;
             this._updateDeleteVisibility(previousIndex);
+            this._updateRowActionStyles(previousIndex);
             const row = this._rowWidgets[index]?.row;
             row?.add_style_class_name('selected');
             if (this._rowWidgets[index]?.selectionMark)
                 this._rowWidgets[index].selectionMark.opacity = 255;
             this._updateDeleteVisibility(index);
+            this._updateRowActionStyles(index);
             if (focus && row) {
                 row.grab_key_focus();
                 this._ensureSelectionVisible(row);
@@ -1483,6 +1497,22 @@
                 widgets.remove.opacity = widgets.row.hover || index === this._selectedIndex ||
                     widgets.remove.has_key_focus()
                     ? 255 : 0;
+        }
+
+        _updateRowActionStyles(index) {
+            const widgets = this._rowWidgets[index];
+            if (!widgets)
+                return;
+            const emphasized = widgets.row.hover || index === this._selectedIndex;
+            for (const actor of [widgets.dragHandle, widgets.addSubtask,
+                widgets.addTaskToHeading, widgets.remove]) {
+                if (!actor)
+                    continue;
+                if (emphasized)
+                    actor.add_style_class_name('overview-todo-row-emphasis');
+                else
+                    actor.remove_style_class_name('overview-todo-row-emphasis');
+            }
         }
 
         _focusSelection() {
