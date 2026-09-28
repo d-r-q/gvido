@@ -876,8 +876,46 @@ export async function run() {
     runtime._selectItem(1, true);
     await delay(250);
     await screenshot('readme-widget', screenshotFrame);
-    runtime.disable();
     screenshotFrame.destroy();
+    runtime._items = [
+        {type: 'heading', level: 0, text: 'Сетка задач'},
+        {type: 'task', level: 0, text: 'Родитель', done: false},
+        {type: 'task', level: 1, text: 'Дочерняя задача', done: false},
+        {type: 'task', level: 2, text: 'Длинная вложенная задача с текстом в две строки для проверки подсветки и положения кнопок', done: false},
+        {type: 'task', level: 3, text: 'Третий уровень', done: true},
+        {type: 'task', level: 4, text: 'Четвёртый уровень', done: false},
+        {type: 'task', level: 5, text: 'Без кнопки добавления', done: false},
+    ];
+    runtime._renderItems();
+    runtime._card.set_size(430, 600);
+    runtime._selectItem(3, true);
+    await delay(250);
+    const nestedRows = runtime._rowWidgets.slice(1);
+    const firstMarkX = nestedRows[0].selectionMark.get_transformed_position()[0];
+    const firstDragX = nestedRows[0].dragHandle.get_transformed_position()[0];
+    const firstRemoveX = nestedRows[0].remove.get_transformed_position()[0];
+    const firstRowRight = nestedRows[0].row.get_transformed_position()[0] +
+        nestedRows[0].row.width;
+    for (const [level, widgets] of nestedRows.entries()) {
+        const markX = widgets.selectionMark.get_transformed_position()[0];
+        const dragX = widgets.dragHandle.get_transformed_position()[0];
+        const removeX = widgets.remove.get_transformed_position()[0];
+        const rowX = widgets.row.get_transformed_position()[0];
+        if (Math.abs(markX - firstMarkX - level * 20) > 1 ||
+            Math.abs(dragX - firstDragX - level * 20) > 1 ||
+            Math.abs(removeX - firstRemoveX) > 1 ||
+            Math.abs(markX - rowX - 3) > 1 ||
+            Math.abs(rowX + widgets.row.width - firstRowRight) > 1 ||
+            Math.abs(dragX - markX - (firstDragX - firstMarkX)) > 1)
+            throw new Error('Nested task columns or indicator gap drifted');
+    }
+    if (nestedRows[5].addSubtask ||
+        !nestedRows[5].row.get_children().some(actor =>
+            actor.has_style_class_name('overview-todo-add-subtask-slot')))
+        throw new Error('Missing add action did not reserve its column');
+    await screenshot('nested-grid', runtime._card);
+    console.log('PROBE PASS: levels 0–5 keep the control grid and absent add slot');
+    runtime.disable();
     Main.overview.hide();
     await delay(900);
     let openedPreferences = 0;

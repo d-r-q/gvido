@@ -731,7 +731,7 @@
                     can_focus: true,
                     track_hover: true,
                     style_class: 'overview-todo-row',
-                    style: `padding-left: ${item.level * Math.max(0, Number(cfg.behavior.indentPx) || 0)}px; min-height: 38px;`,
+                    style: `margin-left: ${item.level * Math.max(0, Number(cfg.behavior.indentPx) || 0)}px; min-height: 38px;`,
                 });
 
                 if (index === this._selectedIndex)
@@ -1927,7 +1927,7 @@
                 ? content.get_preferred_height(content.width)[0] : 0;
             const rowHeight = Math.max(38, lineCount * 24 + 14, wrappedHeight);
             const indentPx = Math.max(0, Number(cfg.behavior.indentPx) || 0);
-            const style = `padding-left: ${item.level * indentPx}px; min-height: ${rowHeight}px;`;
+            const style = `margin-left: ${item.level * indentPx}px; min-height: ${rowHeight}px;`;
             if (widgets.row.get_style() !== style)
                 widgets.row.set_style(style);
         }
